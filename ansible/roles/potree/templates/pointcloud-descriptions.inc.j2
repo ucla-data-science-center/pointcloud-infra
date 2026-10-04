@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+# Generated from content/descriptions.yml (named .inc so httpd doesn't load it
+# globally; the 443 vhost includes it). Apache renders description text as
+# HTML, so every value is escaped.
+{% set folders = potree_descriptions.folders | default({}) %}
+{% set files = potree_descriptions.files | default({}) %}
+{% if folders.values() | select | list %}
+<Directory "{{ potree_web_root }}">
+{% for name, text in folders.items() if text %}
+    AddDescription "{{ text | e }}" "{{ name }}"
+{% endfor %}
+</Directory>
+{% endif %}
+{% for dir in files.keys() | map('dirname') | unique | sort %}
+<Directory "{{ potree_web_root }}/{{ dir }}">
+{%   for path, text in files.items() if text and (path | dirname) == dir %}
+    AddDescription "{{ text | e }}" "{{ path | basename }}"
+{%   endfor %}
+</Directory>
+{% endfor %}

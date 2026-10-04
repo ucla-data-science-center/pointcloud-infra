@@ -63,13 +63,16 @@
         # UCLA Library skin for the mod_autoindex listing.
         # IndexStyleSheet (not a <link> in IndexHeadInsert) is what makes
         # Apache emit table#indexlist and the row classes the CSS targets.
-        IndexOptions FancyIndexing HTMLTable SuppressDescription SuppressRules NameWidth=* Charset=UTF-8 IconsAreLinks FoldersFirst IgnoreCase
+        IndexOptions FancyIndexing HTMLTable SuppressRules NameWidth=* DescriptionWidth=* Charset=UTF-8 IconsAreLinks FoldersFirst IgnoreCase
         IndexStyleSheet /branding/ucla-index.css
         IndexHeadInsert "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
         HeaderName /branding/header.html
         ReadmeName /branding/footer.html
         IndexIgnore {{ potree_autoindex_ignore | join(' ') }}
     </Directory>
+
+    # Description column text, generated from content/descriptions.yml.
+    Include /etc/httpd/conf.d/pointcloud-descriptions.inc
 
     ErrorLog logs/pointcloud-error.log
     CustomLog logs/pointcloud-access.log combined

@@ -39,6 +39,19 @@
           - dnf_timer.status.UnitFileState == 'enabled'
           - dnf_timer.status.ActiveState == 'active'
 
+    - name: Fetch a collection listing
+      ansible.builtin.uri:
+        url: "{{ base }}/Iceland/"
+        validate_certs: false
+        return_content: true
+      register: iceland
+
+    - name: Descriptions from content/descriptions.yml appear in the listing
+      ansible.builtin.assert:
+        that:
+          - "'All Days Merged and Classified' in iceland.content"
+          - "'indexcoldesc' in iceland.content"
+
     - name: Potree assets are cacheable
       ansible.builtin.uri:
         url: "{{ base }}/build/potree/potree.js"

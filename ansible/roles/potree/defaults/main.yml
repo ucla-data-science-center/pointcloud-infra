@@ -45,6 +45,10 @@ potree_selfsigned_key: /etc/pki/tls/private/pointcloud-selfsigned.key
 # until the cert watch (GitHub Action) has been running cleanly for a while.
 potree_hsts_max_age: 0
 
+# Description column text: {folders: {Name: text}, files: {"Dir/page.html": text}}.
+# Production and staging load it from content/descriptions.yml.
+potree_descriptions: {}
+
 # Paths hidden from the directory listing (still reachable by URL).
 potree_autoindex_ignore:
   - branding
