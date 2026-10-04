@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="description" content="Potree Viewer">
+	<meta name="author" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>Potree Viewer</title>
+
+	<link rel="stylesheet" type="text/css" href="../build/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="../libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="../libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jstree/themes/mixed/style.css">
+</head>
+
+<body>
+	<script src="../libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="../libs/spectrum/spectrum.js"></script>
+	<script src="../libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="../libs/three.js/build/three.min.js"></script>
+	<script src="../libs/three.js/extra/lines.js"></script>
+	<script src="../libs/other/BinaryHeap.js"></script>
+	<script src="../libs/tween/tween.min.js"></script>
+	<script src="../libs/d3/d3.js"></script>
+	<script src="../libs/proj4/proj4.js"></script>
+	<script src="../libs/openlayers3/ol.js"></script>
+	<script src="../libs/i18next/i18next.js"></script>
+	<script src="../libs/jstree/jstree.js"></script>
+	<script src="../build/potree/potree.js"></script>
+	<script src="../libs/plasio/js/laslaz.js"></script>
+
+	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
+		<div id="potree_description" class="potree_info_text" style="z-index: 100px;"></div>
+		<!-- Description Here: --> Scan
+	</div>
+	<div id="potree_render_area"></div>
+	<div id="potree_sidebar_container"> </div>
+	</div>
+
+	<script type="module">
+
+		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+
+		viewer.setEDLEnabled(true);
+		viewer.setFOV(60);
+		viewer.setPointBudget(4 * 1000 * 1000);
+		// viewer.setMinNodeSize(0);
+
+		viewer.setDescription("Bamba Doors");
+		viewer.scene.view.position.set(889.248, -2285.890, 1281.846);
+		viewer.scene.view.lookAt(650.680, -44.955, 1003.743);
+
+		viewer.loadSettingsFromURL();
+
+		viewer.loadGUI().then(() => {
+			viewer.setLanguage('en');
+			$("#menu_appearance").next().show();
+			// viewer.toggleSidebar(); 
+		});
+
+
+		Potree.loadPointCloud("https://potree-test2.s3.us-west-2.amazonaws.com/VitalMatters/TheDoors/metadata.json", "The Doors", function (e) {
+			viewer.scene.addPointCloud(e.pointcloud);
+
+			// e.pointcloud.scale.set();
+			e.pointcloud.rotation.set(Math.PI * 0, Math.PI * 0, Math.PI * 0);
+			e.pointcloud.position.set(0, 0, 0);
+
+			let material = e.pointcloud.material;
+
+			material.activeAttributeName = "rgba";
+			material.size = 0.66;
+			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+			material.shape = Potree.PointShape.CIRCLE;
+			// viewer.fitToScreen();
+
+			const ann1 = new Potree.Annotation({
+				position: new THREE.Vector3(932.64, 142.97, 1699.03),
+				title: "1",
+				description: "Sheikh Amadou Bamba Mbacké (1853-1927) was a deeply revered Wali (Sufi saint) and Senegalese revolutionary. His leadership inspired a renewed sense of national pride and identity in French-occupied Senegal that reshaped the nation’s struggle for freedom and independence. As a religious leader, mystic, and poet, Sheikh Amadou Bamba founded the Muridiyya (Mouride Order), a Sufi movement that sought to revive indigenous prosperity by promoting the values of faith, community service, and self-sufficiency."
+			});
+
+			const ann2 = new Potree.Annotation({
+				position: new THREE.Vector3(924.97, 138.29, 1632.79),
+				title: "2",
+				description: "Sheikh Amadou Bamba (1853-1927): In 1887, he established the holy city of Touba which developed into a flourishing economic center and spiritual refuge that symbolically rejected French colonial oppression. Though he was persecuted, imprisoned, and exiled by French authorities, Sheikh Amadou Bamba’s unwavering commitment to spiritual service and nonviolent resistance for the remainder of his life deeply resonated with Senegalese society, leaving a long-lasting imprint on the people and national identity. His legacy remains a major influence on Senegal’s spirit of unity and progress and continues to inspire millions around the world in the struggle for justice and self-determination."
+			});
+
+			const ann3 = new Potree.Annotation({
+				position: new THREE.Vector3(303.84, 128.03, 1634.05),
+				title: "3",
+				description: `Sheikh Ibrahima Fall devoted his own life to acts of charity and followed Sheikh Amadou Bamba’s legacy of social action. As the personal "servant" of Amadou Bamba, Sheikh Ibrahima Fall was seen as the closest to him, most courageous and pious. He was named "Lamp Fall"—the light of the Mourides. Sheikh Ibrahima Fall established the Baye Fall movement—an internal branch within the Muridiyya, whose followers are identifiable by their bright patchwork garments, spiritual amulets, and dreadlocks.`
+			});
+
+			const ann4 = new Potree.Annotation({
+				position: new THREE.Vector3(992.70,123.82, 606.97),
+				title: "4",
+				description: "Inscription (right): 1853-1927 Sheikh Amadou Bamba Servant of the Messenger"
+			});
+
+			const ann5 = new Potree.Annotation({
+				position: new THREE.Vector3(316.21, 125.86, 611.85),
+				title: "5",
+				description: "Inscription (left): Sheikh Ibrahima Fall Gate of the Mouridin"
+			});
+
+			const ann6 = new Potree.Annotation({
+				position: new THREE.Vector3(660.45, 120.10, 1481.66),
+				title: "6",
+				description: "Doors: These painted doors were originally part of a restaurant at the Sandaga market in central Dakar."
+			});
+
+			viewer.scene.annotations.add(ann1);
+			viewer.scene.annotations.add(ann2);
+			viewer.scene.annotations.add(ann3);
+			viewer.scene.annotations.add(ann4);
+			viewer.scene.annotations.add(ann5);
+			viewer.scene.annotations.add(ann6);
+		});
+	</script>
+
+</body>
+
+</html>

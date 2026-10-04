@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="description" content="ITCH SYMPOSIUM">
+	<meta name="author" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>ITCH Symposium | Icelandic Turf Architecture</title>
+	<link rel="icon" type="image/png" href="ucla_favicon.png">
+
+	<link rel="stylesheet" type="text/css" href="../build/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="../libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="../libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jstree/themes/mixed/style.css">
+	
+	<style>
+		:root {
+			--header-bg: #ffffff;
+			--header-text: #000000;
+			--nav-hover: #f0f0f0;
+			--accent-green: #8CC63F; 
+			--sidebar-bg: rgba(25, 25, 25, 0.95);
+			--sidebar-border: #444;
+			--text-light: #ffffff; 
+			--text-muted: #cccccc;
+			--accent-gold: #ffd700;
+		}
+
+		body {
+			margin: 0;
+			font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+			overflow: hidden; 
+			height: 100vh;
+			width: 100vw;
+			background-color: #111; 
+		}
+
+		/* --- POTREE RENDER AREA --- */
+		#potree_render_area {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			z-index: 1;
+		}
+
+		.potree_menu_toggle { display: none !important; }
+
+		/* --- UI FLEXBOX ARCHITECTURE --- */
+		#ui-overlay {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			pointer-events: none; 
+			z-index: 10;
+			display: flex;
+			flex-direction: column; 
+		}
+
+		#ui-overlay * {
+			pointer-events: auto; 
+		}
+
+		/* --- HEADER --- */
+		#main-header {
+			position: relative; 
+			background: var(--header-bg); 
+			color: var(--header-text);
+			box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+			z-index: 50;
+			flex-shrink: 0; 
+		}
+
+		#header-primary {
+			padding: 15px 0;
+			border-bottom: 1px solid #eee;
+		}
+
+		.header-container {
+			width: 95%;
+			margin: 0 auto; 
+			display: flex;
+			justify-content: space-between; 
+			align-items: center;
+		}
+
+		.logo-left img { height: 45px; display: block; }
+		.title-right img { height: 40px; display: block; background: #fafafa; border: 1px dashed #ccc; padding: 5px; }
+
+		#header-secondary { background: var(--header-bg); }
+
+		#main-nav > ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			justify-content: center; 
+		}
+
+		#main-nav > ul > li {
+			padding: 15px 30px;
+			cursor: pointer;
+			font-size: 1.05em;
+			font-weight: bold;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			position: relative; 
+			transition: background 0.2s;
+			color: var(--header-text);
+		}
+
+		#main-nav > ul > li:hover, #main-nav > ul > li.active-nav {
+			background: var(--nav-hover);
+			border-bottom: 3px solid var(--accent-green);
+		}
+
+		/* --- WORKSPACE --- */
+		#workspace {
+			position: relative;
+			flex-grow: 1; 
+			width: 100%;
+			pointer-events: none; 
+			overflow: hidden; 
+		}
+
+		/* --- LEFT INFO BOX --- */
+		#info-box {
+			position: absolute;
+			bottom: 20px;
+			left: 20px;
+			width: 28vw;
+			max-height: 35vh; 
+			background-color: rgba(0, 0, 0, 0.8);
+			border: 1px solid var(--sidebar-border);
+			z-index: 20;
+			color: white;
+			border-radius: 7px;
+			display: flex;
+			flex-direction: column;
+			transition: max-height 0.3s ease;
+			overflow: hidden;
+			box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+			pointer-events: auto;
+		}
+
+		#info-box-toggle {
+			position: absolute;
+			top: 5px;
+			right: 5px;
+			background: none;
+			border: none;
+			color: white;
+			font-size: 1.3em;
+			cursor: pointer;
+			z-index: 25;
+			padding: 5px;
+			line-height: 1;
+		}
+
+		#info-box.collapsed { max-height: 38px; background-color: rgba(0, 0, 0, 0.5); border-color: transparent; }
+		#info-box.collapsed #info-box-content { opacity: 0; pointer-events: none; }
+		
+		#info-box-content {
+			padding: 15px 35px 15px 15px;
+			overflow-y: auto; 
+			line-height: 1.6;
+			height: 100%;
+			box-sizing: border-box;
+			transition: opacity 0.2s;
+		}
+
+		#info-title {
+			margin-top: 0;
+			color: var(--accent-gold);
+			border-bottom: 1px solid #444;
+			padding-bottom: 8px;
+			font-size: 1.2em;
+		}
+
+		.info-meta { font-size: 0.85em; color: var(--text-muted); margin-bottom: 10px; }
+		.info-desc { font-size: 0.9em; color: var(--text-light); }
+
+		/* --- RIGHT SIDEBAR & TABS --- */
+		#sidebar {
+			position: absolute;
+			top: 20px; 
+			right: 0; 
+			width: 340px;
+			max-height: calc(100% - 40px); 
+			background: var(--sidebar-bg);
+			color: var(--text-light);
+			border: 1px solid var(--sidebar-border);
+			border-right: none;
+			border-top-left-radius: 8px;
+			border-bottom-left-radius: 8px;
+			box-shadow: -4px 4px 15px rgba(0,0,0,0.5); 
+			z-index: 20;
+			transform: translateX(0);
+			transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+			display: flex;
+			flex-direction: column;
+			pointer-events: auto;
+		}
+
+		#sidebar.collapsed { transform: translateX(100%); }
+
+		#sidebar-toggle {
+			position: absolute;
+			top: 20px;
+			left: -40px; 
+			width: 40px;
+			height: 50px;
+			background: var(--sidebar-bg);
+			color: var(--text-light);
+			border: 1px solid var(--sidebar-border);
+			border-right: none;
+			border-radius: 8px 0 0 8px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 1.5em;
+			box-shadow: -4px 0px 10px rgba(0,0,0,0.3);
+		}
+
+		#sidebar-tabs {
+			display: flex;
+			flex-direction: row;
+			background: rgba(0,0,0,0.8);
+			border-bottom: 1px solid var(--sidebar-border);
+			border-top-left-radius: 8px;
+			width: 100%;
+			flex-shrink: 0;
+		}
+
+		.sidebar-tab {
+			flex: 1;
+			padding: 16px 5px;
+			cursor: pointer;
+			font-size: 1.1em !important; 
+			font-weight: 900 !important; 
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			color: #ffffff !important; 
+			border-bottom: 4px solid transparent !important;
+			transition: all 0.2s;
+			text-align: center;
+			text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+		}
+
+		.sidebar-tab:hover { background: rgba(255,255,255,0.15); }
+		.sidebar-tab.active {
+			color: var(--accent-gold) !important;
+			border-bottom: 4px solid var(--accent-gold) !important;
+			background: rgba(255,215,0,0.1);
+		}
+
+		#inventory-grid {
+			padding: 20px;
+			display: grid;
+			grid-template-columns: repeat(2, 1fr); 
+			gap: 15px;
+			overflow-y: auto;
+			flex: 1;
+		}
+
+		.inventory-tile {
+			width: 100%;
+			padding-top: 100%; 
+			background-color: #333;
+			border: 2px solid #555;
+			border-radius: 4px;
+			cursor: pointer;
+			position: relative;
+			transition: all 0.2s;
+			overflow: hidden;
+		}
+
+		.inventory-tile:hover { border-color: var(--text-light); transform: scale(1.05); z-index: 2; }
+		.inventory-tile.active { border-color: var(--accent-gold); box-shadow: 0 0 15px rgba(255,215,0,0.4); }
+
+		.inventory-tile img {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			object-fit: cover; 
+			display: block;
+		}
+		
+		.tile-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            font-size: 11px;
+            padding: 5px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+		/* --- STATIC TEXT PAGES --- */
+		.text-page-container {
+			display: none; 
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-color: #ffffff; 
+			z-index: 5; 
+			overflow-y: auto;
+			padding: 50px; 
+			box-sizing: border-box;
+			pointer-events: auto;
+		}
+
+		.text-page-container.active { display: block; }
+
+		.text-content { max-width: 800px; margin: 0 auto; line-height: 1.6; color: #333; }
+		.text-content h1 { border-bottom: 2px solid var(--accent-green); padding-bottom: 10px; color: #222; }
+
+		/* --- DEBUG POPUP & FAB --- */
+		#debug-fab {
+			position: absolute;
+			top: 20px;
+			left: 20px;
+			width: 44px;
+			height: 44px;
+			background: rgba(0,0,0,0.85);
+			color: #ffd700;
+			border: 2px solid #666;
+			border-radius: 50%;
+			font-size: 24px;
+			cursor: pointer;
+			z-index: 200;
+			pointer-events: auto;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: background 0.15s, transform 0.2s;
+			line-height: 1;
+			box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+		}
+		#debug-fab:hover { background: rgba(255,215,0,0.2); border-color: #ffd700; transform: scale(1.1); }
+
+		/* NEW WIDE POPUP STYLING */
+		#debug-info-floater {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			background-color: rgba(15, 15, 15, 0.95);
+			border: 1px solid #555;
+			color: white;
+			padding: 0;
+			border-radius: 8px;
+			z-index: 199;
+			font-family: 'Courier New', Courier, monospace;
+			font-size: 13px;
+			line-height: 1.5;
+			width: 600px; /* Made wider */
+			pointer-events: auto;
+			box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+		}
+
+		.debug-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			background: rgba(255,215,0,0.12);
+			border-bottom: 1px solid #444;
+			padding: 10px 15px;
+			font-weight: bold;
+			color: #ffd700;
+			letter-spacing: 1px;
+			font-size: 14px;
+		}
+
+		.debug-header button {
+			background: none;
+			border: none;
+			color: #888;
+			font-size: 18px;
+			cursor: pointer;
+			padding: 0;
+			line-height: 1;
+		}
+		.debug-header button:hover { color: #fff; }
+
+		/* 2-Column Grid Layout */
+		.debug-content-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 15px;
+			padding: 20px;
+		}
+
+		.debug-full-width {
+			grid-column: 1 / -1;
+		}
+
+		#debug-info-floater .debug-section { 
+			background: rgba(255,255,255,0.03);
+			padding: 10px;
+			border-radius: 6px;
+			border: 1px solid #333;
+		}
+
+		#debug-info-floater strong {
+			color: #ffd700;
+			display: block;
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			margin-bottom: 6px;
+		}
+		
+		#debug-info-floater code {
+			color: #00ff00;
+			display: block;
+			font-size: 13px;
+			background: rgba(0,0,0,0.5);
+			padding: 6px;
+			border-radius: 4px;
+			border: 1px solid #222;
+			margin-bottom: 8px;
+		}
+
+		#debug-edl-slider { width: 100%; margin-top: 6px; cursor: pointer; }
+
+		.debug-btn {
+			width: 100%;
+			background: rgba(255,255,255,0.06);
+			border: 1px solid #555;
+			color: #ccc;
+			padding: 10px;
+			border-radius: 4px;
+			cursor: pointer;
+			font-family: 'Courier New', monospace;
+			font-size: 14px;
+			font-weight: bold;
+			text-align: center;
+			transition: background 0.15s, color 0.15s;
+		}
+		.debug-btn:hover { background: rgba(255,215,0,0.12); color: #ffd700; border-color: #666; }
+		.debug-btn.active { background: rgba(255,215,0,0.25); color: #ffd700; border-color: #ffd700; }
+
+		.debug-copy-btn {
+			display: block;
+			width: 100%;
+			background: rgba(255,255,255,0.1);
+			border: 1px solid #444;
+			color: #fff;
+			padding: 6px 8px;
+			border-radius: 3px;
+			cursor: pointer;
+			font-size: 11px;
+			font-family: 'Courier New', monospace;
+			text-transform: uppercase;
+			transition: background 0.15s;
+		}
+		.debug-copy-btn:hover { background: rgba(255,215,0,0.2); color: #ffd700; border-color: #ffd700; }
+
+		.debug-hidden { display: none !important; }
+
+	</style>
+</head>
+
+<body>
+	<script src="../libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="../libs/spectrum/spectrum.js"></script>
+	<script src="../libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="../libs/three.js/build/three.min.js"></script>
+	<script src="../libs/three.js/extra/lines.js"></script>
+	<script src="../libs/other/BinaryHeap.js"></script>
+	<script src="../libs/tween/tween.min.js"></script>
+	<script src="../libs/d3/d3.js"></script>
+	<script src="../libs/proj4/proj4.js"></script>
+	<script src="../libs/openlayers3/ol.js"></script>
+	<script src="../libs/i18next/i18next.js"></script>
+	<script src="../libs/jstree/jstree.js"></script>
+	<script src="../build/potree/potree.js"></script>
+	<script src="../libs/plasio/js/laslaz.js"></script>
+
+	<div id="potree_render_area"></div>
+
+	<div id="ui-overlay">
+		<header id="main-header">
+			<div id="header-primary">
+				<div class="header-container">
+					<div class="logo-left">
+						<a href="https://www.library.ucla.edu/" target="_blank">
+							<img src="UCLA_logo.png" alt="UCLA Library">
+						</a>
+					</div>
+					<div class="title-right">
+						</div>
+				</div>
+			</div>
+			<div id="header-secondary">
+				<div class="header-container">
+					<nav id="main-nav" style="width: 100%;">
+						<ul>
+							<li id="nav-home" onclick="switchPage('home')">Project Home</li>
+							<li id="nav-exhibit" onclick="switchPage('exhibit')">Exhibit</li>
+							<li id="nav-contributors" onclick="switchPage('contributors')">Contributors</li>
+						</ul>
+					</nav>
+				</div>
+			</div>
+		</header>
+
+		<div id="workspace">
+			
+			<div id="page-home" class="text-page-container active">
+				<div class="text-content">
+					<h1>Project Home</h1>
+					<p>Welcome to the Digital Turf Project.</p>
+					<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+				</div>
+			</div>
+
+			<div id="page-contributors" class="text-page-container">
+				<div class="text-content">
+					<h1>Contributors</h1>
+					<p>Digital Turf Project logo, UCLA, UCLA Cotsen, Leifur Eiriksson, and other contributors, etc.</p>
+				</div>
+			</div>
+
+			<button id="debug-fab" class="debug-hidden" onclick="toggleDebugPanel()" title="Toggle Debug Panel">⚙</button>
+
+			<div id="debug-info-floater" class="debug-hidden">
+				<div class="debug-header">
+					<span>⚙ DEBUG CONTROLS</span>
+					<button onclick="toggleDebugPanel()">✕</button>
+				</div>
+				
+				<div class="debug-content-grid">
+					<div class="debug-section">
+						<strong>Camera Position</strong>
+						<code id="debug-cam-pos">—</code>
+						<button class="debug-copy-btn" onclick="copyValue('debug-cam-pos','Camera Position')">Copy Camera Pos</button>
+					</div>
+					
+					<div class="debug-section">
+						<strong>Object Position</strong>
+						<code id="debug-obj-pos">—</code>
+						<button class="debug-copy-btn" onclick="copyValue('debug-obj-pos','Object Position')">Copy Object Pos</button>
+					</div>
+					
+					<div class="debug-section">
+						<strong>Camera Target</strong>
+						<code id="debug-cam-target">—</code>
+						<button class="debug-copy-btn" onclick="copyValue('debug-cam-target','Camera Target')">Copy Camera Target</button>
+					</div>
+					
+					<div class="debug-section">
+						<strong>Object Rotation</strong>
+						<code id="debug-obj-rot">—</code>
+						<button class="debug-copy-btn" onclick="copyValue('debug-obj-rot','Object Rotation')">Copy Object Rot</button>
+					</div>
+
+					<hr class="debug-full-width" style="border-top: 1px solid #444; margin: 5px 0;">
+
+					<div class="debug-section debug-full-width" style="display: flex; gap: 20px; align-items: center; border: none; background: transparent; padding: 0;">
+						<div style="flex: 1; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid #333;">
+							<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+								<strong>EDL Strength</strong>
+								<span id="edl-val-display" style="color:#00ff00;font-weight:bold;font-family:monospace;font-size:14px;">1.0</span>
+							</div>
+							<input type="range" id="debug-edl-slider" min="0" max="5" step="0.1" value="1.0">
+						</div>
+						<div style="flex: 1;">
+							<button id="texture-toggle-btn" class="debug-btn" onclick="toggleTexture()" style="height: 100%; padding: 15px;">Texture: RGB</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="info-box" style="display: none;">
+				<button id="info-box-toggle" title="Collapse">&#9660;</button>
+				<div id="info-box-content">
+					<h3 id="info-title">Model Title</h3>
+					<div class="info-meta">
+						<div id="info-author"><strong>Source:</strong> <span>...</span></div>
+					</div>
+					<div class="info-desc" id="info-desc">
+						Model description goes here...
+					</div>
+				</div>
+			</div>
+
+			<aside id="sidebar" class="collapsed">
+				<button id="sidebar-toggle" onclick="toggleSidebar()">
+					&#9664; 
+				</button>
+
+				<div id="sidebar-tabs">
+					<div class="sidebar-tab" data-target="turf-strips" onclick="loadCategory('turf-strips')">Strips</div>
+					<div class="sidebar-tab" data-target="turf-blocks" onclick="loadCategory('turf-blocks')">Blocks</div>
+					<div class="sidebar-tab" data-target="turf-tools" onclick="loadCategory('turf-tools')">Tools</div>
+				</div>
+
+				<div id="inventory-grid">
+					</div>
+			</aside>
+		</div>
+	</div>
+
+	<script>
+		// --- DATA STRUCTURE ---
+		const libraryData = {
+			"turf-strips": {
+				items: [
+					{
+						id: "klambra-fresh",
+						title: "Klambra 'Clamped Block'",
+						author: "Helgi's Property, Iceland",
+						thumbnail: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/4_29_2026_Smithsonian_Upload/klambra.png", 
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/8_11_24TurfBlocksStrips-Helgis/klambra_fresh_1/metadata.json",
+						description: `This wedge-shaped turf form is cut with tools like the páll. After klömbrur are dried, transported, and tightly laid in courses with the tops of the soil facing down, the upper twenty percent of the parallelogram facing outward—which in profile tapers into a tail—is chopped off.`,
+						cameraPos: [810, 460, 395],
+						cameraTarget: [400, 295, 100],
+						rotation: [0, 0, 0],
+						potreePresets: { gamma: 1.0, brightness: 0.0, contrast: 1.0, edlStrength: 1.0, edlRadius: 1.4, pointSize: 0.66 }
+					}
+				]
+			},
+			"turf-blocks": {
+				items: [
+					{
+						id: "complete-hnaus",
+						title: "Hnaus (Complete) 'Block'",
+						author: "Helgi's Property, Iceland",
+						thumbnail: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/4_29_2026_Smithsonian_Upload/hnaus_trim.png", 
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/8_8_24TurfBlocksStrips-Helgis/hnaus_complete_1_converted/metadata.json",
+						description: `This rectilinear turf block is mimetic to forms typical of stone masonry. They are associated with outbuildings more than human dwellings, and are often laid so that gaps are bridged.`,
+						cameraPos: [-228, -745, 372],
+						cameraTarget: [70, -260, 156],
+						rotation: [0, 0, -Math.PI * 0.5],
+						potreePresets: { gamma: 1.0, brightness: 0.0, contrast: 1.0, edlStrength: 1.0, edlRadius: 1.4, pointSize: 0.66 }
+					},
+					{
+						id: "trimmed-hnaus",
+						title: "Hnaus (Trimmed) 'Block'",
+						author: "Helgi's Property, Iceland",
+						thumbnail: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/4_29_2026_Smithsonian_Upload/hnaus_trim.png", 
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/8_8_24TurfBlocksStrips-Helgis/hnaus_trimmed_1_converted/metadata.json",
+						description: `This block is the same as that before it, but modified. It has been trimmed to create a ledge for the turf strips that will span the wall's cavity.`,
+						cameraPos: [-375, -565, 0],
+						cameraTarget: [50, -200, 69],
+						rotation: [0, 0, -Math.PI * 0.5],
+						potreePresets: { gamma: 1.0, brightness: 0.0, contrast: 1.0, edlStrength: 1.2, edlRadius: 1.5, pointSize: 0.7 }
+					}
+				]
+			},
+			"turf-tools": {
+				items: [
+					{
+						id: "helgi-tolfjar",
+						title: "Torfljár 'Turf Scythe'",
+						author: "Helgi's Custom Tool",
+						thumbnail: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/4_29_2026_Smithsonian_Upload/sythe.png", 
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/8_6_24Helgi'sTorfljar/helgi_torfljar_1_converted/metadata.json",
+						description: `This custom-built, handheld scythe must be frequently sharpened with a whetstone and is used by one person to cut strip forms of turf. This mid-century example must be a derivative of scythe forms that have persisted from even well before the Viking diaspora of the ninth-eleventh centuries.`,
+						cameraPos: [687, 522, 576],
+						cameraTarget: [100, 200, 200],
+						rotation: [0, 0, 0],
+						potreePresets: { gamma: 1.0, brightness: 0.0, contrast: 1.0, edlStrength: 1.5, edlRadius: 1.6, pointSize: 0.8 }
+					},
+					{
+						id: "pall-glaumbaer",
+						title: "Páll 'Spade'",
+						author: "Glaumbaer Museum",
+						thumbnail: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/4_29_2026_Smithsonian_Upload/spade.png", 
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/8_7_24GlaumbaerMuseumObjects/pall_glaumbaer_1_reduced_converted/metadata.json",
+						description: `This spade's wide wooden handle and metal step signal its use as a turf-cutting tool. Spade forms, and their relationship to turf and peat cutting, are an ongoing topic of the author's research.`,
+						cameraPos: [641, -700, 1100],
+						cameraTarget: [125, 11, 580],
+						rotation: [0, 0, 0],
+						potreePresets: { gamma: 1.0, brightness: 0.0, contrast: 1.0, edlStrength: 1.0, edlRadius: 1.4, pointSize: 0.66 }
+					}
+				]
+			}
+		};
+
+		// Global State
+		let viewer;
+		let loadedClouds = {}; 
+		let activeCloudId = null;
+		let currentCategoryKey = null;
+		let isTextureToggled = false; 
+
+		// --- INIT ---
+		function initPotree() {
+			viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+			window.viewer = viewer; 
+			
+			viewer.loadSettingsFromURL();
+			viewer.setEDLEnabled(true);
+			viewer.setFOV(60);
+			viewer.setPointBudget(4 * 1000 * 1000);
+			viewer.setMinNodeSize(0);
+			
+			viewer.loadGUI(() => {
+				$("#potree_sidebar_container").hide();
+				$("#potree_menu").hide();
+				$(".potree_menu_toggle").hide();
+			});
+		}
+		
+		$(document).ready(() => {
+			initPotree();
+			preloadAllClouds();
+			setupInfoBoxToggle();
+			setupEDLSlider();
+			setupCameraDebugDisplay();
+
+			switchPage('home');
+			loadCategory('turf-strips'); 
+		});
+
+		// --- ROUTING LOGIC ---
+		function switchPage(pageId) {
+			document.querySelectorAll('#main-nav li').forEach(el => el.classList.remove('active-nav'));
+			document.getElementById(`nav-${pageId}`).classList.add('active-nav');
+
+			document.querySelectorAll('.text-page-container').forEach(el => el.classList.remove('active'));
+			
+			const sidebar = document.getElementById('sidebar');
+			const sidebarBtn = document.getElementById('sidebar-toggle');
+			const infoBox = document.getElementById('info-box');
+			const debugMenu = document.getElementById('debug-info-floater');
+			const debugFab = document.getElementById('debug-fab');
+
+			if (pageId === 'exhibit') {
+				setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
+				sidebar.classList.remove('collapsed');
+				sidebar.style.display = 'flex';
+				sidebarBtn.innerHTML = '&#9654;';
+				
+				debugFab.classList.remove('debug-hidden');
+
+				if(activeCloudId) infoBox.style.display = 'flex';
+			} else {
+				document.getElementById(`page-${pageId}`).classList.add('active');
+				sidebar.classList.add('collapsed');
+				sidebar.style.display = 'none';
+				sidebarBtn.innerHTML = '&#9664;';
+				infoBox.style.display = 'none';
+				
+				debugMenu.classList.add('debug-hidden');
+				debugFab.classList.add('debug-hidden');
+				debugFab.textContent = '⚙';
+			}
+		}
+
+		// --- UI LOGIC ---
+		function toggleSidebar() {
+			const sidebar = document.getElementById('sidebar');
+			const btn = document.getElementById('sidebar-toggle');
+			if (sidebar.classList.contains('collapsed')) {
+				sidebar.classList.remove('collapsed');
+				btn.innerHTML = '&#9654;'; 
+			} else {
+				sidebar.classList.add('collapsed');
+				btn.innerHTML = '&#9664;'; 
+			}
+		}
+
+		function setupInfoBoxToggle() {
+			const infoBox = document.getElementById("info-box");
+			const toggleBtn = document.getElementById("info-box-toggle");
+
+			toggleBtn.addEventListener("click", (e) => {
+				e.stopPropagation(); 
+				const isCollapsed = infoBox.classList.toggle("collapsed");
+
+				if (isCollapsed) {
+					toggleBtn.innerHTML = "&#9650;";
+					toggleBtn.title = "Expand";
+				} else {
+					toggleBtn.innerHTML = "&#9660;"; 
+					toggleBtn.title = "Collapse";
+				}
+			});
+		}
+
+		function loadCategory(categoryKey) {
+			currentCategoryKey = categoryKey;
+			
+			document.querySelectorAll('.sidebar-tab').forEach(tab => {
+				if (tab.getAttribute('data-target') === categoryKey) {
+					tab.classList.add('active');
+				} else {
+					tab.classList.remove('active');
+				}
+			});
+			
+			if(!document.getElementById('nav-exhibit').classList.contains('active-nav')){
+                switchPage('exhibit');
+            }
+
+			const categoryData = libraryData[categoryKey];
+			const grid = document.getElementById('inventory-grid');
+			grid.innerHTML = ''; 
+			
+			document.getElementById('info-box').style.display = 'none';
+
+			categoryData.items.forEach(item => {
+				const tile = document.createElement('div');
+				tile.className = 'inventory-tile';
+				tile.id = `tile-${item.id}`;
+				
+				if(item.id === activeCloudId) {
+					tile.classList.add('active');
+					populateInfoBox(item); 
+				}
+
+				tile.onclick = () => selectModel(categoryKey, item.id);
+
+				const img = document.createElement('img');
+				img.src = item.thumbnail;
+				img.alt = item.title;
+				
+				const label = document.createElement('div');
+                label.className = 'tile-label';
+                label.innerText = item.title;
+				
+				img.onerror = () => {
+					img.style.display = 'none';
+					tile.style.border = '2px dashed #666';
+				};
+
+				tile.appendChild(img);
+				tile.appendChild(label);
+				grid.appendChild(tile);
+			});
+
+			const sidebar = document.getElementById('sidebar');
+            sidebar.classList.remove('collapsed');
+            document.getElementById('sidebar-toggle').innerHTML = '&#9654;';
+		}
+
+		function populateInfoBox(itemData) {
+			const infoBox = document.getElementById('info-box');
+			document.getElementById('info-title').innerText = itemData.title;
+			document.querySelector('#info-author span').innerText = itemData.author;
+			document.getElementById('info-desc').innerText = itemData.description;
+			
+			if(document.getElementById('nav-exhibit').classList.contains('active-nav')) {
+				infoBox.style.display = 'flex';
+				infoBox.classList.remove('collapsed');
+				document.getElementById('info-box-toggle').innerHTML = '&#9660;';
+			}
+		}
+
+		// --- POTREE LOGIC ---
+		function preloadAllClouds() {
+			for (let cat in libraryData) {
+				libraryData[cat].items.forEach(item => {
+					Potree.loadPointCloud(item.cloudUrl, item.id, (e) => {
+						e.pointcloud.visible = false;
+						window.viewer.scene.addPointCloud(e.pointcloud);
+						loadedClouds[item.id] = e.pointcloud;
+					});
+				});
+			}
+		}
+
+		function selectModel(categoryKey, cloudId) {
+			const itemData = getLibraryItem(cloudId);
+			if(!itemData) return;
+
+			document.querySelectorAll('.inventory-tile').forEach(el => el.classList.remove('active'));
+			document.getElementById(`tile-${cloudId}`).classList.add('active');
+			
+			populateInfoBox(itemData);
+
+			if (activeCloudId === cloudId) {
+				applyModelPresets(cloudId);
+				return;
+			}
+
+			if (activeCloudId && loadedClouds[activeCloudId]) {
+				loadedClouds[activeCloudId].visible = false;
+			}
+
+			if (loadedClouds[cloudId]) {
+				activeCloudId = cloudId;
+				loadedClouds[cloudId].visible = true;
+				applyModelPresets(cloudId);
+			} else {
+				Potree.loadPointCloud(itemData.cloudUrl, cloudId, (e) => {
+					window.viewer.scene.addPointCloud(e.pointcloud);
+					loadedClouds[cloudId] = e.pointcloud;
+					activeCloudId = cloudId;
+					loadedClouds[cloudId].visible = true;
+					applyModelPresets(cloudId);
+				});
+			}
+		}
+
+		function getLibraryItem(id) {
+			for (let cat in libraryData) {
+				let item = libraryData[cat].items.find(i => i.id === id);
+				if (item) return item;
+			}
+			return null;
+		}
+
+		function applyModelPresets(cloudId) {
+			const itemData = getLibraryItem(cloudId);
+			const cloud = loadedClouds[cloudId];
+			if(!cloud || !itemData) return;
+
+			if(itemData.rotation) cloud.rotation.set(...itemData.rotation);
+			if(itemData.position) cloud.position.set(...itemData.position);
+			
+			window.viewer.scene.view.position.set(...itemData.cameraPos);
+			window.viewer.scene.view.lookAt(...itemData.cameraTarget);
+
+			const presets = itemData.potreePresets;
+			const material = cloud.material;
+
+			isTextureToggled = false;
+			material.activeAttributeName = "rgba";
+			const texBtn = document.getElementById('texture-toggle-btn');
+			if (texBtn) { 
+				texBtn.textContent = 'Texture: RGB'; 
+				texBtn.classList.remove('active'); 
+			}
+			
+			if(presets) {
+				material.size = presets.pointSize || 0.66;
+				window.viewer.setEDLEnabled(true);
+				
+				const initialEDL = presets.edlStrength || 1.0;
+				window.viewer.setEDLStrength(initialEDL);
+				document.getElementById('debug-edl-slider').value = initialEDL;
+				document.getElementById('edl-val-display').innerText = initialEDL;
+
+				window.viewer.setEDLRadius(presets.edlRadius || 1.4);
+				
+				if(typeof window.viewer.setBrightness === "function") window.viewer.setBrightness(presets.brightness);
+				if(typeof window.viewer.setContrast === "function") window.viewer.setContrast(presets.contrast);
+			}
+		}
+
+		// --- PURE UI DEBUG TOOLS ---
+
+		const formatVec = (v) => {
+			if (!v) return "N/A";
+			const x = v.x !== undefined ? v.x : v[0];
+			const y = v.y !== undefined ? v.y : v[1];
+			const z = v.z !== undefined ? v.z : v[2];
+			return `[${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}]`;
+		};
+
+		const formatRot = (r) => {
+			if (!r) return "N/A";
+			return `[${r.x.toFixed(3)}, ${r.y.toFixed(3)}, ${r.z.toFixed(3)}]`;
+		};
+
+		function setupCameraDebugDisplay() {
+			const elCamPos    = document.getElementById("debug-cam-pos");
+			const elCamTarget = document.getElementById("debug-cam-target");
+			const elObjPos    = document.getElementById("debug-obj-pos");
+			const elObjRot    = document.getElementById("debug-obj-rot");
+
+			setInterval(() => {
+				if (!viewer || !viewer.scene || !viewer.scene.view) return;
+
+				elCamPos.innerText    = formatVec(viewer.scene.view.position);
+				elCamTarget.innerText = formatVec(viewer.scene.view.getPivot());
+
+				const cloud = loadedClouds[activeCloudId];
+				elObjPos.innerText = cloud ? formatVec(cloud.position) : "N/A";
+				elObjRot.innerText = cloud ? formatRot(cloud.rotation) : "N/A";
+			}, 250);
+		}
+
+		function toggleTexture() {
+			const cloud = loadedClouds[activeCloudId];
+			if (!cloud) return;
+
+			const material  = cloud.material;
+			const edlSlider = document.getElementById('debug-edl-slider');
+			const edlDisplay = document.getElementById('edl-val-display');
+			const btn = document.getElementById('texture-toggle-btn');
+
+			if (isTextureToggled) {
+				material.activeAttributeName = "rgba";
+				viewer.setEDLEnabled(true);
+				viewer.setEDLStrength(1.0);
+				edlSlider.value = 1.0;
+				edlDisplay.innerText = "1.0";
+				isTextureToggled = false;
+				btn.textContent = "Texture: RGB";
+				btn.classList.remove('active');
+			} else {
+				material.activeAttributeName = "classification";
+				viewer.setEDLEnabled(true);
+				viewer.setEDLStrength(2.0);
+				edlSlider.value = 2.0;
+				edlDisplay.innerText = "2.0";
+				isTextureToggled = true;
+				btn.textContent = "Texture: Classification";
+				btn.classList.add('active');
+			}
+		}
+
+		function toggleDebugPanel() {
+			const panel = document.getElementById('debug-info-floater');
+			const fab   = document.getElementById('debug-fab');
+			panel.classList.toggle('debug-hidden');
+			
+			if(panel.classList.contains('debug-hidden')){
+			    fab.textContent = '⚙';
+			} else {
+			    fab.textContent = '✕';
+			}
+		}
+
+		function copyValue(elId, label) {
+			const text = document.getElementById(elId).innerText;
+			if (!text || text === 'N/A' || text === '—') return;
+			
+			if (navigator.clipboard && window.isSecureContext) {
+				navigator.clipboard.writeText(text).then(() => alert(`Copied ${label}:\n${text}`));
+			} else {
+				const ta = Object.assign(document.createElement('textarea'), {
+					value: text, style: 'position:fixed;left:-9999px'
+				});
+				document.body.appendChild(ta);
+				ta.select();
+				document.execCommand('copy');
+				document.body.removeChild(ta);
+				alert(`Copied ${label}:\n${text}`);
+			}
+		}
+
+		function setupEDLSlider() {
+			const slider  = document.getElementById('debug-edl-slider');
+			const display = document.getElementById('edl-val-display');
+			slider.addEventListener('input', (e) => {
+				const val = parseFloat(e.target.value);
+				display.innerText = val.toFixed(1);
+				if (viewer) viewer.setEDLStrength(val);
+			});
+		}
+
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,17 @@
+---
+- name: Install web server packages
+  ansible.builtin.apt:
+    name:
+      - apache2
+      - ssl-cert
+      - unzip
+      - unattended-upgrades
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install certbot
+  ansible.builtin.apt:
+    name: certbot
+    state: present
+  when: potree_tls_mode == 'letsencrypt'

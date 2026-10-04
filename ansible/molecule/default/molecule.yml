@@ -1,0 +1,50 @@
+---
+# Local staging: Ubuntu 24.04 with systemd in a Podman container, configured
+# by the same playbook as production. Only TLS differs (self-signed cert).
+scenario:
+  test_sequence:
+    - dependency
+    - destroy
+    - syntax
+    - create
+    - converge
+    - idempotence
+    - verify
+    - destroy
+
+dependency:
+  name: galaxy
+  options:
+    requirements-file: requirements.yml
+
+driver:
+  name: podman
+
+platforms:
+  - name: pointcloud-staging
+    image: docker.io/geerlingguy/docker-ubuntu2404-ansible:latest
+    pre_build_image: true
+    command: /lib/systemd/systemd
+    systemd: always
+    groups:
+      - web
+    published_ports:
+      - "127.0.0.1:8443:443/tcp"
+      - "127.0.0.1:8080:80/tcp"
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: ../../roles
+    ANSIBLE_COLLECTIONS_PATH: ../../collections
+  inventory:
+    group_vars:
+      web:
+        potree_tls_mode: selfsigned
+        # Staging reboots never; the container has no real kernel anyway.
+        potree_unattended_reboot: false
+  playbooks:
+    converge: ../../playbooks/site.yml
+
+verifier:
+  name: ansible

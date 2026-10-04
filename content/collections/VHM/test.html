@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="description" content="Multi-collection 3D viewer">
+	<meta name="author" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>Multi-Collection Viewer</title>
+
+	<link rel="stylesheet" type="text/css" href="../build/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="../libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="../libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jstree/themes/mixed/style.css">
+
+	<style>
+		/* --- Tab System Styles --- */
+		.tabs {
+			position: absolute;
+			top: 10px;
+			left: 50%;
+			transform: translateX(-50%);
+			z-index: 1001; /* Higher than other elements */
+			background: rgba(0,0,0,0.5);
+			padding: 5px;
+			border-radius: 8px;
+			display: flex;
+			gap: 5px;
+		}
+
+		.tab-button {
+			padding: 8px 16px;
+			cursor: pointer;
+			border-radius: 6px;
+			background-color: #444;
+			color: white;
+			font-family: sans-serif;
+			font-size: 16px;
+			border: 1px solid #666;
+			transition: background-color 0.3s;
+		}
+
+		.tab-button:hover {
+			background-color: #555;
+		}
+
+		.tab-button.active {
+			background-color: #007bff;
+			font-weight: bold;
+		}
+
+		/* Hide inactive content by default */
+		.tab-content {
+			display: none;
+		}
+
+		/* --- Original Styles from Example --- */
+		.img {
+			width: 100%;
+			opacity: 1;
+			transition: opacity 0.3s ease;
+			cursor: pointer;
+			border-radius: 4px;
+		}
+
+		.img:hover {
+			opacity: 0.7;
+		}
+
+		.buttons-container {
+			position: absolute;
+			right: 15px;
+			top: 50%;
+			transform: translateY(-50%);
+			flex-direction: column;
+			display: flex;
+			gap: 15px;
+			width: 150px;
+			z-index: 1000;
+		}
+
+		#description-box {
+			position: absolute;
+			bottom: 20px;
+			left: 20px;
+			width: 320px;
+			padding: 20px;
+			background-color: rgba(0, 0, 0, .65);
+			z-index: 1000;
+			color: white;
+			border-radius: 7px;
+			font-family: sans-serif;
+			line-height: 1.5;
+		}
+	</style>
+</head>
+
+<body>
+	<script src="../libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="../libs/spectrum/spectrum.js"></script>
+	<script src="../libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="../libs/three.js/build/three.min.js"></script>
+	<script src="../libs/three.js/extra/lines.js"></script>
+	<script src="../libs/other/BinaryHeap.js"></script>
+	<script src="../libs/tween/tween.min.js"></script>
+	<script src="../libs/d3/d3.js"></script>
+	<script src="../libs/proj4/proj4.js"></script>
+	<script src="../libs/openlayers3/ol.js"></script>
+	<script src="../libs/i18next/i18next.js"></script>
+	<script src="../libs/jstree/jstree.js"></script>
+	<script src="../build/potree/potree.js"></script>
+	<script src="../libs/plasio/js/laslaz.js"></script>
+
+	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px;">
+		
+		<!-- Tab Buttons -->
+		<div class="tabs">
+			<button class="tab-button active" onclick="openTab('collection1')">Refugee Collection</button>
+			<button class="tab-button" onclick="openTab('collection2')">Household Items</button>
+		</div>
+
+		<!-- Tab Content: Collection 1 -->
+		<div id="collection1" class="tab-content" style="display: block;">
+			<div class="buttons-container">
+				<div id="c1_btn1" class="btn"><img src="resources/can.png" class="img"></div>
+				<div id="c1_btn2" class="btn"><img src="resources/trunk.png" class="img"></div>
+				<div id="c1_btn3" class="btn"><img src="resources/stove.png" class="img"></div>
+				<div id="c1_btn4" class="btn"><img src="resources/noidong.png" class="img"></div>
+			</div>
+		</div>
+
+		<!-- Tab Content: Collection 2 (Buttons reordered) -->
+		<div id="collection2" class="tab-content">
+			<div class="buttons-container">
+				<div id="c2_btn3" class="btn"><img src="resources/stove.png" class="img"></div>
+				<div id="c2_btn1" class="btn"><img src="resources/can.png" class="img"></div>
+				<div id="c2_btn4" class="btn"><img src="resources/noidong.png" class="img"></div>
+				<div id="c2_btn2" class="btn"><img src="resources/trunk.png" class="img"></div>
+			</div>
+		</div>
+
+		<!-- Shared Potree and UI Elements -->
+		<div id="potree_render_area" class="area">
+			<div id="description-box"></div>
+		</div>
+		<div id="potree_sidebar_container"></div>
+	</div>
+
+	<script type="module">
+		import * as THREE from "/libs/three.js/build/three.module.js";
+
+		// --- VIEWER INITIALIZATION ---
+		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+		viewer.setEDLEnabled(true);
+		viewer.setFOV(60);
+		viewer.setPointBudget(4 * 1000 * 1000);
+		viewer.setMinNodeSize(0);
+		viewer.loadGUI();
+
+		// --- DATA SETUP ---
+		// All models from all collections are loaded once and stored here.
+		const NUM_OF_MODELS = 4;
+		window.pointcloudMap = {};
+		window.pointclouds = [];
+		let campos = [];
+		let camtargets = [];
+
+		for (let i = 1; i <= NUM_OF_MODELS; i++) {
+			window.pointcloudMap[i] = [];
+		}
+
+		const descriptions = [];
+		descriptions[1] = "<strong>Metal Guigoz Milk Can</strong><br><br>Used by Nguyen Duc Trach in a re-education camp to boil water and cook, helping him survive starvation. The can is a symbol of ingenuity and the will to live in the face of extreme adversity and imprisonment."
+		descriptions[2] = "<strong>Wooden Chest</strong><br><br>Made from repurposed barracks wood and UNHCR-issued materials in the Galang refugee camp. It was used by Le Xuan Mui to hold mementos, representing the preservation of identity and memory during displacement."
+		descriptions[3] = "<strong>Aluminum and Bamboo Tabletop Stove</strong><br><br>Crafted from bomb parts, a milk can, and bamboo within a re-education camp. This object showcases incredible resourcefulness and the creation of essential tools for survival from the remnants of war."
+		descriptions[4] = "<strong>Black Bronze Pot</strong><br><br>An 18th-century family heirloom that traveled with the Nguyen Tuyet family through multiple forced displacements, from the First Indochina War to their eventual resettlement in the U.S. It stands as a testament to family continuity across generations of turmoil."
+
+		const descriptionElement = document.getElementById('description-box');
+
+		// --- CORE FUNCTIONS ---
+		
+		/**
+		 * Handles tab switching logic.
+		 * @param {string} tabName - The ID of the tab content to show ('collection1' or 'collection2').
+		 */
+		window.openTab = function(tabName) {
+			// Hide all tab content
+			let tabContents = document.getElementsByClassName("tab-content");
+			for (let i = 0; i < tabContents.length; i++) {
+				tabContents[i].style.display = "none";
+			}
+
+			// Deactivate all tab buttons
+			let tabButtons = document.getElementsByClassName("tab-button");
+			for (let i = 0; i < tabButtons.length; i++) {
+				tabButtons[i].className = tabButtons[i].className.replace(" active", "");
+			}
+
+			// Show the selected tab content and activate its button
+			document.getElementById(tabName).style.display = "block";
+			event.currentTarget.className += " active";
+
+			// When switching, show the first model of that collection by default
+			if (tabName === 'collection1') {
+				showModel(1); // Show Can first
+			} else if (tabName === 'collection2') {
+				showModel(3); // Show Stove first, as it's the first in this tab's visual order
+			}
+		}
+
+		/**
+		 * Shows a specific model by its index and updates the view.
+		 * @param {number} modelIndex - The permanent index of the model (1-4).
+		 */
+		window.showModel = function(modelIndex) {
+			window.pointclouds.forEach(p => p.visible = false);
+			
+			if (window.pointcloudMap[modelIndex] && window.pointcloudMap[modelIndex].length > 0) {
+				window.pointcloudMap[modelIndex].forEach(p => {
+					p.visible = true;
+				});
+				viewer.scene.view.position.set(campos[modelIndex - 1][0], campos[modelIndex - 1][1], campos[modelIndex - 1][2]);
+				viewer.scene.view.lookAt(camtargets[modelIndex - 1][0], camtargets[modelIndex - 1][1], camtargets[modelIndex - 1][2]);
+				descriptionElement.innerHTML = descriptions[modelIndex];
+			}
+		}
+
+		/**
+		 * Adds click listeners to all model selection buttons across all tabs.
+		 */
+		function addEventListeners() {
+			// Collection 1 button listeners
+			document.getElementById("c1_btn1").addEventListener("click", () => showModel(1));
+			document.getElementById("c1_btn2").addEventListener("click", () => showModel(2));
+			document.getElementById("c1_btn3").addEventListener("click", () => showModel(3));
+			document.getElementById("c1_btn4").addEventListener("click", () => showModel(4));
+
+			// Collection 2 button listeners (note they call the same model indices)
+			document.getElementById("c2_btn3").addEventListener("click", () => showModel(3));
+			document.getElementById("c2_btn1").addEventListener("click", () => showModel(1));
+			document.getElementById("c2_btn4").addEventListener("click", () => showModel(4));
+			document.getElementById("c2_btn2").addEventListener("click", () => showModel(2));
+		}
+
+		/**
+		 * Loads all point clouds into the viewer scene at once.
+		 */
+		function loadAllPointClouds(scene) {
+			// This function is the same as your example, loading all 4 models.
+			// The logic remains identical.
+			Potree.loadPointCloud("https://potree-test2.s3.us-west-2.amazonaws.com/VHM/GuigozCan/metadata.json", "Guigoz Can", function (e) {
+				window.pointcloudMap['1'].push(e.pointcloud);
+				window.pointclouds.push(e.pointcloud);
+				scene.addPointCloud(e.pointcloud);
+				campos.push([0, 400, 0]);
+				camtargets.push([0, 0, 0]);
+				e.pointcloud.visible = true; // Start with this one visible
+				descriptionElement.innerHTML = descriptions[1]; // Set initial text
+			});
+
+			Potree.loadPointCloud("https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Trunk/metadata.json", "Trunk", function (e) {
+				window.pointcloudMap['2'].push(e.pointcloud);
+				window.pointclouds.push(e.pointcloud);
+				scene.addPointCloud(e.pointcloud);
+				campos.push([225, -1000, 0]);
+				camtargets.push([220, 0, 0]);
+				e.pointcloud.rotation.set(0, 0, Math.PI * -0.5);
+				e.pointcloud.position.set(0, 0, -100);
+				e.pointcloud.visible = false;
+			});
+
+			Potree.loadPointCloud("https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Stove/metadata.json", "Stove", function (e) {
+				window.pointcloudMap['3'].push(e.pointcloud);
+				window.pointclouds.push(e.pointcloud);
+				scene.addPointCloud(e.pointcloud);
+				campos.push([0, 500, 0]);
+				camtargets.push([0, 0, 0]);
+				e.pointcloud.rotation.set(0, 0, Math.PI * 0.05);
+				e.pointcloud.visible = false;
+			});
+
+			Potree.loadPointCloud("https://potree-test2.s3.us-west-2.amazonaws.com/VHM/NoiDong/metadata.json", "Noi Dong", function (e) {
+				window.pointcloudMap['4'].push(e.pointcloud);
+				window.pointclouds.push(e.pointcloud);
+				scene.addPointCloud(e.pointcloud);
+				campos.push([-14, 350, 0]);
+				camtargets.push([-10, 0, -60]);
+				e.pointcloud.visible = false;
+			});
+			
+			addEventListeners();
+		}
+
+		// --- APPLICATION START ---
+		loadAllPointClouds(viewer.scene);
+
+	</script>
+</body>
+
+</html>

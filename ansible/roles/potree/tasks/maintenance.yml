@@ -1,0 +1,41 @@
+---
+- name: Enable unattended upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Configure unattended reboots
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/52pointcloud-unattended
+    content: |
+      // Managed by Ansible (pointcloud-infra)
+      Unattended-Upgrade::Automatic-Reboot "{{ potree_unattended_reboot | ternary('true', 'false') }}";
+      Unattended-Upgrade::Automatic-Reboot-Time "{{ potree_unattended_reboot_time }}";
+    owner: root
+    group: root
+    mode: "0644"
+
+# A full root disk is what silently broke cert renewal in August 2026.
+- name: Create journald drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Cap journald disk use
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/size.conf
+    content: |
+      [Journal]
+      SystemMaxUse={{ potree_journald_max_use }}
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart journald

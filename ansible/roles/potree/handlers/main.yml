@@ -1,0 +1,16 @@
+---
+- name: Check apache config
+  ansible.builtin.command: apache2ctl configtest
+  changed_when: false
+  listen: Reload apache
+
+- name: Reload apache service
+  ansible.builtin.systemd_service:
+    name: apache2
+    state: reloaded
+  listen: Reload apache
+
+- name: Restart journald
+  ansible.builtin.systemd_service:
+    name: systemd-journald
+    state: restarted

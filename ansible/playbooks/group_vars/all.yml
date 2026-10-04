@@ -1,0 +1,12 @@
+---
+# Settings shared by every environment (local staging and production).
+# Environment-specific values live in inventory/<env>/group_vars or the
+# molecule scenario.
+
+# Collection pages are versioned in this repo under content/collections.
+potree_content_src: "{{ playbook_dir }}/../../content/collections/"
+
+potree_server_name: www.pointcloud.ucla.edu
+potree_server_aliases:
+  - pointcloud.ucla.edu
+potree_letsencrypt_email: datascience@library.ucla.edu

@@ -1,0 +1,18 @@
+---
+# Dynamic inventory: finds the production web server by its Terraform tags,
+# so there are no IP addresses to keep in sync by hand.
+plugin: amazon.aws.aws_ec2
+profile: ucla-library-dsc
+regions:
+  - us-west-2
+filters:
+  tag:Project: pointcloud
+  tag:Environment: production
+  instance-state-name: running
+hostnames:
+  - tag:Name
+compose:
+  # Public IP works both before and after the Elastic IP cutover.
+  ansible_host: public_ip_address
+groups:
+  web: tags.get('Role') == 'web'

@@ -1,0 +1,29 @@
+---
+# First run on a new host only. Apache must already be serving the ACME
+# challenge path on port 80, and DNS (the Elastic IP) must point here.
+- name: Apply pending Apache changes before requesting a certificate
+  ansible.builtin.meta: flush_handlers
+
+- name: Request certificate
+  ansible.builtin.command:
+    argv: "{{ _certbot_args + (['-d'] | product(_domains) | flatten) }}"
+    creates: "/etc/letsencrypt/live/{{ potree_server_name }}/fullchain.pem"
+  vars:
+    _domains: "{{ [potree_server_name] + potree_server_aliases }}"
+    _certbot_args:
+      - certbot
+      - certonly
+      - --webroot
+      - --webroot-path
+      - "{{ potree_letsencrypt_webroot }}"
+      - --cert-name
+      - "{{ potree_server_name }}"
+      - --non-interactive
+      - --agree-tos
+      - --email
+      - "{{ potree_letsencrypt_email }}"
+      - --deploy-hook
+      - systemctl reload apache2
+
+- name: Switch Apache to the new certificate
+  ansible.builtin.import_tasks: apache.yml

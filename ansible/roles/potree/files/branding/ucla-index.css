@@ -1,0 +1,31 @@
+/* UCLA Library skin for Apache mod_autoindex listings */
+:root{
+  --ucla-blue:#2774AE; --ucla-darker-blue:#003B5C; --ucla-gold:#FFD100;
+  --ink:#1b1b1b; --rule:#d6d6d6;
+}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);background:#fff;line-height:1.5;}
+h1{max-width:960px;margin:1.5rem auto .5rem;padding:0 1.25rem;font-size:1.4rem;font-weight:600;color:var(--ucla-darker-blue);}
+.ucla-header{background:var(--ucla-darker-blue);border-bottom:4px solid var(--ucla-gold);}
+.ucla-header__inner{max-width:960px;margin:0 auto;padding:.9rem 1.25rem;display:flex;align-items:center;gap:.85rem;}
+.ucla-header__logo{height:40px;width:auto;display:block;}
+.ucla-header__wordmark{color:#fff;font-size:1.15rem;font-weight:700;letter-spacing:.01em;}
+.ucla-header__wordmark span{color:var(--ucla-gold);font-weight:400;}
+.ucla-header a{color:#fff;text-decoration:none;}
+table#indexlist{max-width:960px;margin:.5rem auto 2rem;width:calc(100% - 2.5rem);border-collapse:collapse;font-size:.95rem;}
+#indexlist tr.indexhead{background:var(--ucla-blue);}
+#indexlist th{color:#fff;text-align:left;padding:.5rem .75rem;border:0;}
+#indexlist td{padding:.45rem .75rem;border-bottom:1px solid var(--rule);vertical-align:baseline;}
+#indexlist tr.even{background:#f6f9fc;}
+#indexlist tr.odd{background:#fff;}
+#indexlist a{color:var(--ucla-blue);text-decoration:none;}
+#indexlist a:hover{text-decoration:underline;}
+#indexlist th a{color:#fff;}
+#indexlist td.indexcolsize,#indexlist td.indexcollastmod{color:#555;white-space:nowrap;}
+#indexlist tr.indexbreakrow th{border:0;padding:0;}
+.ucla-footer{max-width:960px;margin:0 auto 3rem;padding:1rem 1.25rem 0;border-top:1px solid var(--rule);font-size:.85rem;color:#666;}
+.ucla-footer a{color:var(--ucla-blue);}
+address{max-width:960px;margin:0 auto 2rem;padding:0 1.25rem;font-size:.75rem;color:#999;font-style:normal;}
+@media (max-width:600px){
+  #indexlist th.indexcoldesc,#indexlist td.indexcoldesc,
+  #indexlist th.indexcollastmod,#indexlist td.indexcollastmod{display:none;}
+}

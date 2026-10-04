@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="description" content="ITCH SYMPOSIUM">
+	<meta name="author" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>ITCH Symposium | Library Database</title>
+	<link rel="icon" type="image/png" href="ucla_favicon.png">
+
+	<link rel="stylesheet" type="text/css" href="../build/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="../libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="../libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jstree/themes/mixed/style.css">
+	
+	<style>
+		:root {
+			--ucla-blue: #2774AE;
+			--bg-light: #f5f5f5;
+			--border-color: #e0e0e0;
+			--text-main: #333;
+			--text-muted: #666;
+		}
+
+		body {
+			margin: 0;
+			font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+			background-color: var(--bg-light);
+			color: var(--text-main);
+			overflow-x: hidden;
+		}
+
+		/* --- HEADER & NAVIGATION --- */
+		#main-header {
+			background: white; 
+			box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+			position: sticky;
+			top: 0;
+			z-index: 50;
+		}
+
+		#header-primary {
+			border-bottom: 1px solid var(--border-color);
+			height: 10vh;
+			min-height: 70px;
+		}
+
+		.header-container {
+			width: 90%;
+			max-width: 1400px; 
+			margin: 0 auto; 
+			display: flex;
+			justify-content: space-between; 
+			align-items: center;
+			height: 100%; 
+		}
+
+		.logo-left img {
+			height: 7vh; 
+			max-height: 60px;
+			display: block;
+		}
+
+		.title-right img {
+			height: 6vh;
+			max-height: 50px;
+			display: block;
+			background: #eee;
+			border: 1px dashed #ccc;
+			padding: 5px;
+		}
+
+		#header-secondary {
+			background: #fafafa;
+			border-bottom: 1px solid var(--border-color);
+		}
+
+		/* Target ONLY the main ul to prevent cascading flex issues */
+		#main-nav > ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+		}
+
+		#main-nav > ul > li {
+			padding: 15px 25px;
+			cursor: pointer;
+			font-size: 1.1em;
+			font-weight: 500;
+			position: relative;
+			transition: background 0.2s, color 0.2s;
+		}
+
+		#main-nav > ul > li:hover {
+			background: #ebebeb;
+			color: var(--ucla-blue);
+		}
+
+		/* --- DROPDOWN LOGIC --- */
+		.nav-dropdown-menu {
+			position: absolute;
+			top: 100%;
+			left: 0;
+			background-color: white;
+			min-width: 200px;
+			box-shadow: 0px 8px 16px rgba(0,0,0,0.15);
+			z-index: 100;
+			padding: 0;
+			margin: 0;
+			list-style: none;
+			border: 1px solid var(--border-color);
+			border-top: none;
+			
+			/* Force Vertical Stacking */
+			display: flex;
+			flex-direction: column;
+
+			/* Hidden State */
+			opacity: 0;
+			visibility: hidden;
+			pointer-events: none;
+			transform: translateY(-5px);
+			transition: all 0.2s ease-in-out;
+		}
+
+		/* Visible State (Triggered by JS) */
+		.nav-dropdown-menu.show {
+			opacity: 1;
+			visibility: visible;
+			pointer-events: auto;
+			transform: translateY(0);
+		}
+
+		.nav-dropdown-menu li {
+			display: block;
+			padding: 12px 20px !important;
+			border-bottom: 1px solid #eee;
+			font-size: 0.95em;
+			color: var(--text-main);
+			width: 100%;
+			box-sizing: border-box;
+		}
+
+		.nav-dropdown-menu li:last-child {
+			border-bottom: none;
+		}
+
+		.nav-dropdown-menu li:hover {
+			background-color: #f8f8f8;
+			color: var(--ucla-blue);
+		}
+
+		/* --- MAIN PAGE CONTAINERS --- */
+		.page-container {
+			display: none;
+			width: 90%;
+			max-width: 1200px;
+			margin: 40px auto;
+			background: white;
+			padding: 30px;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+			border-radius: 4px;
+			min-height: 60vh;
+		}
+
+		.page-container.active {
+			display: block;
+		}
+
+		.page-title {
+			border-bottom: 2px solid var(--ucla-blue);
+			padding-bottom: 10px;
+			margin-top: 0;
+			margin-bottom: 30px;
+			color: #222;
+		}
+
+		/* --- LIBRARY LIST INTERFACE --- */
+		.library-controls {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 20px;
+			font-size: 0.9em;
+			color: var(--text-muted);
+		}
+
+		.library-item {
+			display: flex;
+			padding: 20px 0;
+			border-top: 1px solid var(--border-color);
+			position: relative;
+		}
+
+		.library-item:hover {
+			background-color: #fcfcfc;
+		}
+
+		.item-number {
+			border: 1px solid #aaa;
+			color: #555;
+			width: 24px;
+			height: 24px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 0.8em;
+			margin-right: 20px;
+			flex-shrink: 0;
+		}
+
+		.item-thumbnail {
+			width: 100px;
+			height: 100px;
+			margin-right: 20px;
+			flex-shrink: 0;
+			background-color: #eaeaea;
+			border: 1px solid #ccc;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			overflow: hidden;
+		}
+
+		.item-thumbnail img {
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+		}
+
+		.item-details {
+			flex-grow: 1;
+		}
+
+		.item-type {
+			font-size: 0.75em;
+			letter-spacing: 1px;
+			color: #777;
+			margin-bottom: 5px;
+			text-transform: uppercase;
+		}
+
+		.item-title {
+			margin: 0 0 5px 0;
+			font-size: 1.25em;
+			color: var(--ucla-blue);
+		}
+
+		.item-author {
+			margin: 0 0 10px 0;
+			font-size: 0.9em;
+			color: #444;
+		}
+
+		.item-description {
+			display: none;
+			margin-top: 15px;
+			padding: 15px;
+			background: #f9f9f9;
+			border-left: 3px solid var(--ucla-blue);
+			font-size: 0.95em;
+			line-height: 1.5;
+		}
+
+		.item-actions {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			margin-left: 20px;
+			min-width: 140px;
+			align-items: stretch;
+		}
+
+		.btn {
+			padding: 8px 12px;
+			border: none;
+			border-radius: 3px;
+			cursor: pointer;
+			font-weight: bold;
+			font-size: 0.85em;
+			text-align: center;
+			transition: opacity 0.2s;
+		}
+
+		.btn:hover {
+			opacity: 0.85;
+		}
+
+		.btn-preview {
+			background-color: var(--ucla-blue);
+			color: white;
+		}
+
+		.btn-info {
+			background-color: #ddd;
+			color: #333;
+		}
+
+		/* --- POTREE MODAL OVERLAY --- */
+		#modal-backdrop {
+			display: none;
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100vw;
+			height: 100vh;
+			background-color: rgba(0, 0, 0, 0.85);
+			z-index: 999;
+		}
+
+		#potree-modal {
+			display: none;
+			position: fixed;
+			top: 5vh;
+			left: 5vw;
+			width: 90vw;
+			height: 90vh;
+			background-color: #111;
+			z-index: 1000;
+			flex-direction: column;
+			border-radius: 8px;
+			overflow: hidden;
+			box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+		}
+
+		.modal-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 15px 30px;
+			background: #222;
+			color: white;
+			border-bottom: 1px solid #444;
+		}
+
+		.modal-header h2 {
+			margin: 0;
+			font-size: 1.3em;
+			color: #ffd700;
+		}
+
+		.btn-close {
+			background: transparent;
+			border: 1px solid #ffd700;
+			color: #ffd700;
+			padding: 5px 15px;
+			font-size: 1em;
+			cursor: pointer;
+			border-radius: 3px;
+			transition: all 0.2s;
+		}
+
+		.btn-close:hover {
+			background: #ffd700;
+			color: #222;
+		}
+
+		#potree_render_area {
+			position: relative;
+			flex-grow: 1;
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+</head>
+
+<body>
+	<script src="../libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="../libs/spectrum/spectrum.js"></script>
+	<script src="../libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="../libs/three.js/build/three.min.js"></script>
+	<script src="../libs/three.js/extra/lines.js"></script>
+	<script src="../libs/other/BinaryHeap.js"></script>
+	<script src="../libs/tween/tween.min.js"></script>
+	<script src="../libs/d3/d3.js"></script>
+	<script src="../libs/proj4/proj4.js"></script>
+	<script src="../libs/openlayers3/ol.js"></script>
+	<script src="../libs/i18next/i18next.js"></script>
+	<script src="../libs/jstree/jstree.js"></script>
+	<script src="../build/potree/potree.js"></script>
+	<script src="../libs/plasio/js/laslaz.js"></script>
+
+	<header id="main-header">
+		<div id="header-primary">
+			<div class="header-container">
+				<div class="logo-left">
+					<a href="https://www.library.ucla.edu/" target="_blank">
+						<img src="UCLA_logo.png" alt="UCLA Library">
+					</a>
+				</div>
+				<div class="title-right">
+					<img src="placeholder_title.png" alt="ITCH Symposium / Digital Turf Project">
+				</div>
+			</div>
+		</div>
+		<div id="header-secondary">
+			<div class="header-container" style="justify-content: flex-start;">
+				<nav id="main-nav">
+					<ul>
+						<li onclick="switchPage('home')">Project Home</li>
+						<li id="nav-dropdown-trigger">
+							Exhibit &#9662;
+							<ul class="nav-dropdown-menu" id="nav-dropdown-menu">
+								<li onclick="loadCategory('turf-blocks')">Turf Blocks</li>
+								<li onclick="loadCategory('turf-strips')">Turf Strips</li>
+								<li onclick="loadCategory('turf-tools')">Turf Tools</li>
+							</ul>
+						</li>
+						<li onclick="switchPage('contributors')">Contributors</li>
+					</ul>
+				</nav>
+			</div>
+		</div>
+	</header>
+
+	<main>
+		<div id="page-home" class="page-container active">
+			<h2 class="page-title">Project Home</h2>
+			<p>Welcome to the Digital Turf Project. [Content goes here - text only as requested]</p>
+		</div>
+
+		<div id="page-contributors" class="page-container">
+			<h2 class="page-title">Contributors</h2>
+			<p>UCLA Cotsen, Leifur Eiriksson, and other collaborators. [Content goes here - text and photos as requested]</p>
+		</div>
+
+		<div id="page-exhibit" class="page-container">
+			<h2 class="page-title" id="exhibit-title">Library Collection</h2>
+			
+			<div class="library-controls">
+				<span id="result-count">0 Results</span>
+				<span>Database: Icelandic Turf Architecture</span>
+			</div>
+
+			<div id="library-list"></div>
+		</div>
+	</main>
+
+	<div id="modal-backdrop" onclick="closeModal()"></div>
+	<div id="potree-modal">
+		<div class="modal-header">
+			<h2 id="modal-model-title">Loading...</h2>
+			<button class="btn-close" onclick="closeModal()">Close Viewer</button>
+		</div>
+		<div id="potree_render_area"></div>
+	</div>
+
+	<script>
+		// --- DROPDOWN JAVASCRIPT LOGIC ---
+		document.addEventListener("DOMContentLoaded", () => {
+			const trigger = document.getElementById('nav-dropdown-trigger');
+			const menu = document.getElementById('nav-dropdown-menu');
+
+			trigger.addEventListener('mouseenter', () => {
+				menu.classList.add('show');
+			});
+
+			trigger.addEventListener('mouseleave', () => {
+				menu.classList.remove('show');
+			});
+		});
+
+
+		const libraryData = {
+			"turf-blocks": {
+				categoryTitle: "Turf Blocks",
+				items: [
+					{
+						id: "complete-hnaus",
+						title: "Hnaus (Complete) 'Block'",
+						author: "Helgi's Property, Iceland",
+						thumbnail: "placeholder_thumb1.jpg", 
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/8_8_24TurfBlocksStrips-Helgis/hnaus_complete_1_converted/metadata.json",
+						description: `This rectilinear turf block is mimetic to forms typical of stone masonry. They are associated with outbuildings more than human dwellings, and are often laid so that gaps are bridged.`,
+						cameraPos: [-228, -745, 372],
+						cameraTarget: [70, -260, 156],
+						rotation: [0, 0, -Math.PI * 0.5],
+						potreePresets: {
+							gamma: 1.0, brightness: 0.0, contrast: 1.0, edlStrength: 1.0, edlRadius: 1.4, pointSize: 0.66
+						}
+					},
+					{
+						id: "trimmed-hnaus",
+						title: "Hnaus (Trimmed) 'Block'",
+						author: "Helgi's Property, Iceland",
+						thumbnail: "placeholder_thumb2.jpg", 
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/8_8_24TurfBlocksStrips-Helgis/hnaus_trimmed_1_converted/metadata.json",
+						description: `This block is the same as that before it, but modified. It has been trimmed to create a ledge for the turf strips that will span the wall's cavity.`,
+						cameraPos: [-375, -565, 0],
+						cameraTarget: [50, -200, 69],
+						rotation: [0, 0, -Math.PI * 0.5],
+						potreePresets: {
+							gamma: 1.0, brightness: 0.0, contrast: 1.0, edlStrength: 1.2, edlRadius: 1.5, pointSize: 0.7
+						}
+					}
+				]
+			},
+			"turf-strips": {
+				categoryTitle: "Turf Strips",
+				items: [
+					{
+						id: "klambra-fresh",
+						title: "Klambra 'Clamped Block'",
+						author: "Helgi's Property, Iceland",
+						thumbnail: "placeholder_thumb3.jpg", 
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/8_11_24TurfBlocksStrips-Helgis/klambra_fresh_1/metadata.json",
+						description: `This wedge-shaped turf form is cut with tools like the páll. After klömbrur are dried, transported, and tightly laid in courses with the tops of the soil facing down, the upper twenty percent of the parallelogram facing outward—which in profile tapers into a tail—is chopped off.`,
+						cameraPos: [810, 460, 395],
+						cameraTarget: [400, 295, 100],
+						rotation: [0, 0, 0],
+						potreePresets: {
+							gamma: 1.0, brightness: 0.0, contrast: 1.0, edlStrength: 1.0, edlRadius: 1.4, pointSize: 0.66
+						}
+					}
+				]
+			},
+			"turf-tools": {
+				categoryTitle: "Turf Tools",
+				items: [
+					{
+						id: "helgi-tolfjar",
+						title: "Torfljár 'Turf Scythe'",
+						author: "Helgi's Custom Tool",
+						thumbnail: "placeholder_thumb4.jpg", 
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/8_6_24Helgi'sTorfljar/helgi_torfljar_1_converted/metadata.json",
+						description: `This custom-built, handheld scythe must be frequently sharpened with a whetstone and is used by one person to cut strip forms of turf. This mid-century example must be a derivative of scythe forms that have persisted from even well before the Viking diaspora of the ninth-eleventh centuries.`,
+						cameraPos: [687, 522, 576],
+						cameraTarget: [100, 200, 200],
+						rotation: [0, 0, 0],
+						potreePresets: {
+							gamma: 1.0, brightness: 0.0, contrast: 1.0, edlStrength: 1.5, edlRadius: 1.6, pointSize: 0.8
+						}
+					},
+					{
+						id: "pall-glaumbaer",
+						title: "Páll 'Spade'",
+						author: "Glaumbaer Museum",
+						thumbnail: "placeholder_thumb5.jpg", 
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/IcelandicTurfArchitecture/8_7_24GlaumbaerMuseumObjects/pall_glaumbaer_1_reduced_converted/metadata.json",
+						description: `This spade's wide wooden handle and metal step signal its use as a turf-cutting tool. Spade forms, and their relationship to turf and peat cutting, are an ongoing topic of the author's research.`,
+						cameraPos: [641, -700, 1100],
+						cameraTarget: [125, 11, 580],
+						rotation: [0, 0, 0],
+						potreePresets: {
+							gamma: 1.0, brightness: 0.0, contrast: 1.0, edlStrength: 1.0, edlRadius: 1.4, pointSize: 0.66
+						}
+					}
+				]
+			}
+		};
+
+		let viewer;
+		let loadedClouds = {}; 
+
+		function initPotree() {
+			window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+			viewer.loadSettingsFromURL();
+			viewer.setEDLEnabled(true);
+			viewer.setFOV(60);
+			viewer.setPointBudget(4 * 1000 * 1000);
+			viewer.setMinNodeSize(0);
+			viewer.loadGUI(() => {
+				$(".potree_menu_toggle").hide();
+			});
+		}
+		
+		$(document).ready(() => {
+			initPotree();
+			preloadAllClouds();
+		});
+
+		function switchPage(pageId) {
+			document.querySelectorAll('.page-container').forEach(el => el.classList.remove('active'));
+			document.getElementById(`page-${pageId}`).classList.add('active');
+			
+			// Close menu if clicked via dropdown
+			document.getElementById('nav-dropdown-menu').classList.remove('show');
+		}
+
+		function loadCategory(categoryKey) {
+			switchPage('exhibit');
+			const category = libraryData[categoryKey];
+			document.getElementById('exhibit-title').innerText = category.categoryTitle;
+			document.getElementById('result-count').innerText = `${category.items.length} Results`;
+			
+			const listContainer = document.getElementById('library-list');
+			listContainer.innerHTML = ''; 
+
+			category.items.forEach((item, index) => {
+				const itemHtml = `
+					<div class="library-item">
+						<div class="item-number">${index + 1}</div>
+						<div class="item-thumbnail">
+							<img src="${item.thumbnail}" alt="Thumb" onerror="this.style.display='none'">
+						</div>
+						<div class="item-details">
+							<div class="item-type">3D MODEL</div>
+							<h3 class="item-title">${item.title}</h3>
+							<p class="item-author">${item.author}</p>
+							<div class="item-description" id="desc-${item.id}">
+								${item.description}
+							</div>
+						</div>
+						<div class="item-actions">
+							<button class="btn btn-preview" onclick="openModelViewer('${categoryKey}', ${index})">
+								Preview Model
+							</button>
+							<button class="btn btn-info" onclick="toggleDescription('${item.id}')">
+								Details &#9662;
+							</button>
+						</div>
+					</div>
+				`;
+				listContainer.insertAdjacentHTML('beforeend', itemHtml);
+			});
+		}
+
+		function toggleDescription(id) {
+			const descEl = document.getElementById(`desc-${id}`);
+			if(descEl.style.display === "block") {
+				descEl.style.display = "none";
+			} else {
+				descEl.style.display = "block";
+			}
+		}
+
+		function preloadAllClouds() {
+			for (let cat in libraryData) {
+				libraryData[cat].items.forEach(item => {
+					Potree.loadPointCloud(item.cloudUrl, item.id, (e) => {
+						e.pointcloud.visible = false;
+						window.viewer.scene.addPointCloud(e.pointcloud);
+						loadedClouds[item.id] = e.pointcloud;
+					});
+				});
+			}
+		}
+
+		// --- POTREE MODAL LOGIC (Double Frame Buffer Fix) ---
+		function openModelViewer(categoryKey, itemIndex) {
+			const itemData = libraryData[categoryKey].items[itemIndex];
+			
+			// 1. Unhide elements
+			document.getElementById('modal-backdrop').style.display = 'block';
+			document.getElementById('potree-modal').style.display = 'flex';
+			document.getElementById('modal-model-title').innerText = itemData.title;
+
+			// Hide all currently loaded clouds
+			for (let id in loadedClouds) {
+				loadedClouds[id].visible = false;
+			}
+
+			// 2. Wait for the browser to paint the 'flex' layout
+			requestAnimationFrame(() => {
+				// 3. Wait a second frame to ensure the DOM geometry is locked
+				requestAnimationFrame(() => {
+					
+					// 4. Force Potree and the browser to acknowledge the new size
+					window.dispatchEvent(new Event('resize'));
+
+					// 5. Now it is safe to load and position the camera
+					const cloud = loadedClouds[itemData.id];
+					if (cloud) {
+						setupCloudProperties(cloud, itemData);
+					} else {
+						Potree.loadPointCloud(itemData.cloudUrl, itemData.id, (e) => {
+							window.viewer.scene.addPointCloud(e.pointcloud);
+							loadedClouds[itemData.id] = e.pointcloud;
+							setupCloudProperties(e.pointcloud, itemData);
+						});
+					}
+				});
+			});
+		}
+
+		function setupCloudProperties(cloud, itemData) {
+			cloud.visible = true;
+			
+			if(itemData.rotation) cloud.rotation.set(...itemData.rotation);
+			if(itemData.position) cloud.position.set(...itemData.position);
+			
+			window.viewer.scene.view.position.set(...itemData.cameraPos);
+			window.viewer.scene.view.lookAt(...itemData.cameraTarget);
+
+			const presets = itemData.potreePresets;
+			const material = cloud.material;
+
+			material.activeAttributeName = "rgba";
+			material.pointColorType = Potree.PointColorType.RGBA;
+			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+			material.shape = Potree.PointShape.CIRCLE;
+			
+			if(presets) {
+				material.size = presets.pointSize || 0.66;
+				window.viewer.setEDLEnabled(true);
+				window.viewer.setEDLStrength(presets.edlStrength || 1.0);
+				window.viewer.setEDLRadius(presets.edlRadius || 1.4);
+				
+				if(typeof window.viewer.setBrightness === "function") window.viewer.setBrightness(presets.brightness);
+				if(typeof window.viewer.setContrast === "function") window.viewer.setContrast(presets.contrast);
+			}
+		}
+
+		function closeModal() {
+			document.getElementById('potree-modal').style.display = 'none';
+			document.getElementById('modal-backdrop').style.display = 'none';
+			for (let id in loadedClouds) {
+				loadedClouds[id].visible = false;
+			}
+		}
+	</script>
+</body>
+
+</html>

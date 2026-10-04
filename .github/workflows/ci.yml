@@ -1,0 +1,40 @@
+---
+name: CI
+
+"on":
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (yamllint, ansible-lint, terraform, tflint)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          cache: true
+      - name: Install Ansible collections
+        run: pixi run -- ansible-galaxy collection install -r ansible/requirements.yml -p ansible/collections
+      - name: Lint
+        run: pixi run lint
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # tflint plugin download
+
+  molecule:
+    name: Molecule (local staging in Podman)
+    runs-on: ubuntu-24.04
+    needs: lint
+    steps:
+      - uses: actions/checkout@v7
+      - uses: prefix-dev/setup-pixi@v0.10.2
+        with:
+          cache: true
+      - name: Install Ansible collections
+        run: pixi run -- ansible-galaxy collection install -r ansible/requirements.yml -p ansible/collections
+      - name: Molecule test
+        run: pixi run test

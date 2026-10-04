@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="description" content="VHM Interactive Exhibit">
+	<meta name="author" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>Refugee Artifacts | Vietnamese Heritage Museum</title>
+	<link rel="icon" type="image/png" href="resources/ucla_favicon.png">
+
+	<link rel="stylesheet" type="text/css" href="../build/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="../libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="../libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jstree/themes/mixed/style.css">
+</head>
+
+<body>
+	<script src="../libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="../libs/spectrum/spectrum.js"></script>
+	<script src="../libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="../libs/three.js/build/three.min.js"></script>
+	<script src="../libs/three.js/extra/lines.js"></script>
+	<script src="../libs/other/BinaryHeap.js"></script>
+	<script src="../libs/tween/tween.min.js"></script>
+	<script src="../libs/d3/d3.js"></script>
+	<script src="../libs/proj4/proj4.js"></script>
+	<script src="../libs/openlayers3/ol.js"></script>
+	<script src="../libs/i18next/i18next.js"></script>
+	<script src="../libs/jstree/jstree.js"></script>
+	<script src="../build/potree/potree.js"></script>
+	<script src="../libs/plasio/js/laslaz.js"></script>
+
+	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px;">
+
+		<header id="main-header">
+
+			<div id="header-primary">
+				<div class="header-container" id="primary-container">
+					
+					<div class="left-logo-container">
+						<a href="https://dal.ucla.edu/rmci/node/1" target="_blank" class="logo-link" id="logo-rmci">
+							<img src="resources/RMCI.png" alt="Refugee Material Culture Initiative Logo">
+						</a>
+					</div>
+					
+					<h1 class="header-title">Vietnamese Refugee Artifacts</h1>
+					
+					<div class="right-elements-container">
+						<a href="https://vietnamesemuseum.org/" target="_blank" class="logo-link" id="logo-vhm">
+							<img src="resources/VHM.png" alt="Vietnamese Heritage Museum Logo">
+						</a>
+						<button id="fullscreen-btn" title="Toggle Fullscreen"></button>
+					</div>
+
+				</div>
+			</div>
+
+			<div id="header-secondary">
+				<div class="header-container" id="secondary-container">
+					<nav id="category-tabs">
+						<ul>
+							</ul>
+					</nav>
+				</div>
+			</div>
+
+		</header>
+		<div id="object-thumbnails-container">
+			</div>
+
+		<div id="render_area_wrapper">
+			<div id="potree_render_area" class="area"></div>
+			<div id="potree_render_area2" class="area" style="display: none;"></div>
+			
+			<div id="info-box" style="display: none;">
+				<button id="info-box-toggle" title="Hide Details">&#9660;</button>
+				<div id="info-box-content"></div>
+			</div>
+
+			<div id="debug-info-floater" class="debug-hidden">
+				<div class="debug-section">
+					<strong>Camera Position:</strong>
+					<code id="debug-cam-pos"></code>
+				</div>
+				<div class="debug-section">
+					<strong>Camera Target:</strong>
+					<code id="debug-cam-target"></code>
+				</div>
+				<hr>
+				<div class="debug-section">
+					<strong>Object Position:</strong>
+					<code id="debug-obj-pos"></code>
+				</div>
+				<div class="debug-section">
+					<strong>Object Rotation:</strong>
+					<code id="debug-obj-rot"></code>
+				</div>
+			</div>
+		</div>
+
+		<div id="potree_sidebar_container"> </div>
+
+	</div>
+
+	<style>
+		body {
+			margin: 0;
+			font-family: sans-serif;
+		}
+
+		/* --- Main Header & Top Tabs --- */
+		#main-header {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			background: white; 
+			z-index: 10;
+			box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+		}
+
+		#header-primary {
+			width: 100%;
+			height: 10vh; 
+			border-bottom: 1px solid #eee;
+		}
+		
+		#header-secondary {
+			width: 100%;
+			height: 5vh; 
+			border-bottom: 1px solid #ddd; 
+		}
+
+		.header-container {
+			width: 90%;
+			max-width: 1400px; 
+			margin: 0 auto; 
+			display: flex;
+			align-items: center;
+            height: 100%; 
+		}
+
+		#primary-container {
+			position: relative;
+			/* Spread items to edges */
+			justify-content: space-between; 
+		}
+		
+		#secondary-container {
+			justify-content: center; 
+		}
+		
+		.left-logo-container {
+			display: flex;
+			align-items: center;
+			z-index: 2;
+		}
+
+		/* NEW: Container for right-side elements */
+		.right-elements-container {
+			display: flex;
+			align-items: center;
+			z-index: 2;
+		}
+
+		.logo-link {
+			display: inline-block;
+		}
+		
+		/* Add margin to VHM logo so it doesn't touch the button */
+		#logo-vhm {
+			margin-right: 20px;
+		}
+
+		.header-title {
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, -50%);
+			margin: 0;
+			font-size: 1.6em;
+			font-weight: 500;
+			color: #333;
+			z-index: 1;
+		}
+
+		#header-primary img {
+			height: 8vh; 
+			width: auto;
+			display: block;
+		}
+		
+		#logo-rmci img {
+			height: 8vh; 
+		}
+
+		#logo-vhm img {
+			height: 8vh; 
+		}
+
+		/* --- Category Tabs --- */
+		#category-tabs ul {
+			display: flex;
+			flex-direction: row;
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			justify-content: center; 
+		}
+
+		#category-tabs li {
+			padding: 1vh 1vh; 
+			cursor: pointer;
+			border-bottom: 3px solid transparent;
+			transition: background-color 0.2s, border-color 0.2s;
+			color: black; 
+			font-size: 1.1em; 
+			font-weight: 500;
+			margin: 0 4px; 
+			display: flex;
+			align-items: center;
+			height: 100%;
+		}
+
+		#category-tabs li:hover {
+			background-color: rgba(0, 0, 0, 0.05); 
+		}
+
+		#category-tabs li.active {
+			border-bottom-color: #FFD700; 
+			font-weight: 700;
+		}
+
+		/* --- Right Sidebar Thumbnails --- */
+		#object-thumbnails-container {
+			position: absolute;
+			right: 0px;
+			top: 15vh; 
+			flex-direction: column;
+			display: flex;
+			justify-content: flex-start;
+			padding-top: 20px;
+			width: 150px;
+			height: calc(100% - 15vh); 
+			z-index: 2;
+			overflow-y: auto; 
+		}
+
+		.thumbnail-button {
+			margin: 0 15px 15px 15px;
+			cursor: pointer;
+		}
+
+		.thumbnail-image {
+			width: 100%;
+			opacity: 1;
+			transition: opacity 0.3s ease, transform 0.3s ease;
+			border: 2px solid #ccc; 
+			border-radius: 4px;
+			height: 10vh;
+			object-fit: contain;
+		}
+
+		.thumbnail-image:hover {
+			opacity: 0.8;
+			transform: scale(1.05);
+		}
+		
+		.thumbnail-image.active {
+			border: 3px solid #FFD700; 
+			box-shadow: 0 0 10px #FFD700;
+		}
+
+		/* --- Bottom-Left Info Box --- */
+		#info-box {
+			position: absolute;
+			bottom: 20px;
+			left: 20px;
+			width: 30vw;
+			height: 75vh; 
+			/* MODIFIED: Translucent background */
+			background-color: rgba(0, 0, 0, 0.6);
+			z-index: 2;
+			color: white;
+			border-radius: 7px;
+			display: flex;
+			flex-direction: column;
+			transition: height 0.3s ease, width 0.3s ease;
+			overflow: hidden;
+		}
+		
+		/* Links in the info box should be visible */
+		#info-box a {
+			color: #FFD700;
+			text-decoration: none;
+			border-bottom: 1px dotted #FFD700;
+		}
+		#info-box a:hover {
+			text-decoration: underline;
+		}
+
+		#info-box-toggle {
+			position: absolute;
+			top: 5px;
+			right: 5px;
+			background: none;
+			border: none;
+			color: white;
+			font-size: 1.5em;
+			cursor: pointer;
+			z-index: 5;
+			padding: 5px;
+			line-height: 1;
+		}
+
+		#info-box.collapsed {
+			height: 40px; 
+			width: 50px; 
+		}
+
+		#info-box.collapsed #info-box-content {
+			display: none;
+		}
+		
+		#info-box-content {
+			padding: 15px;
+			padding-top: 45px; 
+			overflow-y: auto; 
+			line-height: 1.5;
+			height: 100%;
+			box-sizing: border-box; 
+		}
+
+		/* --- Potree Area --- */
+		#render_area_wrapper {
+			position: absolute;
+			top: 15vh; 
+			left: 0;
+			width: 100%;
+			height: calc(100% - 15vh);
+		}
+
+		#potree_render_area {
+			position: absolute;
+			top: 0; 
+			left: 0;
+			width: 100%; /* Will dynamically shrink to 50% via JS */
+			height: 100%;
+			transition: width 0.3s ease;
+		}
+
+		#potree_render_area2 {
+			position: absolute;
+			top: 0; 
+			left: 50%;
+			width: 50%;
+			height: 100%;
+			transition: width 0.3s ease;
+		}
+
+		/* --- Fullscreen Button --- */
+		#fullscreen-btn {
+			position: relative; 
+			align-self: center; 
+			height: 5vh;
+			width: 5vh; 
+			max-height: 45px; 
+			max-width: 45px;  
+			background-color: white;
+			border: 2px solid white;
+			border-radius: 5px;
+			z-index: 3; 
+			cursor: pointer;
+			box-sizing: border-box; 
+			padding: 0;
+		}
+
+		#fullscreen-btn.maximize::before {
+			content: "";
+			display: block;
+			width: 30%;
+			height: 30%;
+			border-top: 3px solid rgb(128, 128, 128);
+			border-left: 3px solid rgb(128, 128, 128);
+			position: absolute;
+			top: 15%;
+			left: 15%;
+		}
+		#fullscreen-btn.maximize::after {
+			content: "";
+			display: block;
+			width: 30%;
+			height: 30%;
+			border-bottom: 3px solid rgb(128, 128, 128);
+			border-right: 3px solid rgb(128, 128, 128);
+			position: absolute;
+			bottom: 15%;
+			right: 15%;
+		}
+
+		#fullscreen-btn.minimize::before {
+			content: "";
+			display: block;
+			width: 30%;
+			height: 30%;
+			border-bottom: 3px solid rgb(128, 128, 128);
+			border-left: 3px solid rgb(128, 128, 128);
+			position: absolute;
+			bottom: 15%;
+			left: 15%;
+		}
+		#fullscreen-btn.minimize::after {
+			content: "";
+			display: block;
+			width: 30%;
+			height: 30%;
+			border-top: 3px solid rgb(128, 128, 128);
+			border-right: 3px solid rgb(128, 128, 128);
+			position: absolute;
+			top: 15%;
+			right: 15%;
+		}
+
+
+		/* --- DEBUG PANEL --- */
+		#debug-info-floater {
+			position: absolute;
+			top: 15px;
+			right: 15px;
+			background-color: rgba(0, 0, 0, 0.75);
+			color: white;
+			padding: 10px 15px;
+			border-radius: 5px;
+			z-index: 100;
+			font-family: 'Courier New', Courier, monospace;
+			font-size: 14px;
+			line-height: 1.6;
+			min-width: 300px;
+		}
+
+		#debug-info-floater .debug-section {
+			margin-bottom: 5px;
+		}
+
+		#debug-info-floater strong {
+			color: #ffd700;
+		}
+		
+		#debug-info-floater code {
+			color: #00ff00;
+			display: block;
+			margin-left: 10px;
+		}
+
+		#debug-info-floater hr {
+			border: none;
+			border-top: 1px solid #555;
+			margin: 8px 0;
+		}
+
+		.debug-hidden {
+			display: none;
+		}
+
+	</style>
+
+	<script type="module">
+		import * as THREE from "/libs/three.js/build/three.module.js";
+
+		// --- 1. MUSEUM DATA ---
+		const museumData = {
+			"land-reform": {
+				name: "Land Reform",
+				objects: [
+					{
+						id: "chalice",
+						name: "Chalice with cover",
+						thumbnail: "resources/chalice.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Chalice/metadata.json",
+						description: `
+                        <div class="artifact-card">
+                            <h3>Chalice with cover</h3>
+                            <p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/599" target="_blank">VHM_0048</a></p>
+                            <p><strong>Date:</strong> 1954</p>
+                            <p><strong>Donor:</strong> Phạm Thu Hảo</p>
+                            <p><strong>Description:</strong> This Catholic chalice belonged to Phạm Thu Hảo, who brought it with her when she fled North Vietnam in 1954.<br>Following France’s withdrawal from Indochina and the signing of the Geneva Accords, Vietnam was divided into two states: the Democratic Republic of Vietnam in the north and the State of Vietnam (pre-cursor of the Republic of Vietnam) in the south.<br>As a devout Vietnamese Catholic, Phạm Thu Hảo joined the mass migration southward to escape religious persecution under the new communist regime in the north.<br>The chalice traveled with her during the mass migration known as Tàu Há Mồm (“Passage to Freedom”), when nearly 800,000 people made the difficult journey south.<br>The migration came in the wake of violent campaigns such as the 1953 Land Reform ( Cải Cách Ruộng Đất ), during which thousands of religious followers ( người theo đạo )—including Vietnamese Catholics—and landowners were executed.</p>
+                        </div>
+                        `,
+						cameraPos: [71.72, 271.41, -80],
+						cameraTarget: [50, 40, 50],
+						rotation: [0, 0, 0],
+						position: [0, 0, 0]
+					},
+
+					{
+						id: "pot",
+						name: "Black Bronze Pot",
+						thumbnail: "resources/noidong.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/NoiDong/metadata.json",
+						description: `
+						<div class="artifact-card">
+    					<h3>Black bronze pot</h3>
+    					<p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/488" target="_blank">VHM_0012</a></p>
+    					<p><strong>Date:</strong> 18th century</p>
+    					<p><strong>Donor:</strong> Nguyễn Ngọc Tuyết</p>
+    					<p><strong>Description:</strong> This black bronze pot from the 18th century has been in Nguyễn Ngọc Tuyết's
+						family for hundreds of years and has traveled with them through multiple forced displacements:
+						from their home village of Dương A to Nam Định during the First Indochina War, to Saigon after
+						the Geneva Accords was signed and Vietnam was divided at the 17th parallel, and then to the
+						U.S. with the end of the Vietnam War.</p>
+						</div>
+						`,
+						cameraPos: [445.95, 195.89, 232.39],
+						cameraTarget: [133.36, 128.74, 0.93],
+						rotation: [0, 0, 0],
+						position: [0, 0, 0]
+					},
+				]
+			},
+			"pre-1975": {
+				name: "Pre-1975",
+				objects: [
+					{
+						id: "canteen",
+						name: "Military Canteen",
+						thumbnail: "resources/canteen.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Military Canteen/metadata.json",
+						description: `
+                        <div class="artifact-card">
+							<h3>Military Canteen</h3>
+							<p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/709" target="_blank">VHM_0072</a></p>
+							<p>Pending</p>
+                    	</div>
+                        `,
+						cameraPos: [101, 363, -162],
+						cameraTarget: [67.24, 124.1, 41.5],
+						rotation: [0, 0, 0],
+						position: [0, 0, 0]
+					}
+				]
+			},
+			"re-education": {
+				name: "Re-education Camp",
+				objects: [
+					{
+						id: "can_copy",
+						name: "Guigoz Can (Refugee)",
+						thumbnail: "resources/can.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/GuigozCan/metadata.json",
+						description: `
+                        <div class="artifact-card">
+                            <h3>Guigoz Milk Can</h3>
+                            <p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/481" target="_blank">VHM_0015</a></p>
+                            <p><strong>Date:</strong> c. 1980s</p>
+                            <p><strong>Donor:</strong> Nguyễn Đức Trạch</p>
+                            <p><strong>Description:</strong> Due to their durability, these cans were often repurposed to hold/cook food and water. Those in “re-education” camps would buy/trade for these cans so that they could secretly cook insects, mice, lizards and other critters to supplement their meals and ward off starvation. This can belonged to Nguyễn Đức Trạch, who was imprisoned in “re-education” camps in Vietnam from 1978 to 1988, and it followed him from camp to camp. The regions of the camps that held him are written on the can: (from top to bottom) Long Giao, Yên Bái, Vân Giang, Lào Cai, Vĩnh Phú, and Z30D in Bình Thuận Province.</p>
+                        </div>
+                        `,
+						mapImage: "placeholder-map-1.jpg",
+						cameraPos: [271.85, 262.40, 160.31],
+						cameraTarget: [79.42, 87.13, 80.38],
+						rotation: [0, 0, 0],
+						position: [0, 0, 0]
+					},
+
+					{
+						id: "stove",
+						name: "Stove",
+						thumbnail: "resources/stove.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Stove/metadata.json",
+						description: `
+                        <div class="artifact-card">
+                            <h3>Aluminum tabletop stove</h3>
+                            <p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/524" target="_blank">VHM_0005</a></p>
+                            <p><strong>Date:</strong> 1975-1980</p>
+                            <p><strong>Donor:</strong> Trần Chi Hiếu</p>
+                            <p><strong>Description:</strong> This aluminum tabletop stove was made in a “re-education” camp by Trần Chí Hiếu during his imprisonment in the Bưng Sẫm a “re-education” camp in Vĩnh Long province from 1975-1980. The stove is made of three distinct components: the bottom piece which served as the kerosene box, the middle which consisted of the cover for the bottom piece and small tubes for inserting the wick, and the top, which held the flame. The metal components consisted of bomb fragments, barbed wire, and a Guigoz milk can. It took over a month to make this stove.</p>
+                        </div>
+                        `,
+						cameraPos: [247.99, 101.96, 150.82],
+						cameraTarget: [46.95, 66.15, 74.93],
+						rotation: [0, Math.PI * .0, Math.PI * .05],
+						position: [0, 0, 0]
+					},
+
+					{
+						id: "mangocup",
+						name: "Mango Cup",
+						thumbnail: "resources/mangocup.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Mango Cup/metadata.json",
+						description: `
+                        <div class="artifact-card">
+    						<h3>Mango seed cup</h3>
+    						<p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/693" target="_blank">VHM_0056</a></p>
+    						<p><strong>Date:</strong> 1978</p>
+    						<p><strong>Donor:</strong> Nguyễn Ngọc Diệp</p>
+    						<p><strong>Description:</strong> This cup was made from found materials and made into the shape of a mango seed by Nguyễn Ngọc Diệp's father while he was imprisoned in the K3 "re-education camp" in Vĩnh Phú, one of the northern “reeducation” camps where thousands of former South Vietnamese military officers were detained after 1975. A soaring phoenix is engraved on the back of the cup using only makeshift tools. At the time of his imprisonment, Diệp’s mother was one month pregnant. Diệp's father was imprisoned for a total of 7 years.</p>
+						</div>
+                        `,
+						cameraPos: [203.17, -42.90, -9.51],
+						cameraTarget: [-1.17, 70.34, 56.04],
+						rotation: [0, Math.PI * .0, Math.PI * .05],
+						position: [0, 0, 0]
+					},
+
+					{
+						id: "volin",
+						name: "Violin & Bow",
+						thumbnail: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Violin/violin.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Violin/metadata.json",
+						compareUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/ViolinBow/metadata.json",
+						description: `
+                        <div class="artifact-card">
+    						<h3>Violin & Bow</h3>
+    						<p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/512" target="_blank">VHM_0006</a></p>
+    						<p><strong>Date:</strong> 1976</p>
+    						<p><strong>Donor:</strong> Lê Trị</p>
+    						<p><strong>Description:</strong> The violin was created by Lê Trị, a former Captain in Unit 101 of the Army of the Republic of Vietnam who trained himself as a carpenter while in a "re-education" camp. The violin is made from canary wood (vàng tâm), scraped and worked down via broken glass shards. The various pieces are attached by glue made from buffalo or cow hide. The bow strings are made of thin nylon wire. Lê Trị worked on the violin in secrecy, completing it within a month despite being caught twice and disciplined for engaging in such illicit activities.</p>
+						</div>
+                        `,
+						cameraPos: [242.45, 171.72, 682.42],
+						cameraTarget: [242.45, 171.72, 338.19],
+						rotation: [0, Math.PI * .0, Math.PI * .05],
+						position: [0, 0, 0]
+					}
+				]
+			},
+			"in-transit": {
+				name: "In Transit",
+				objects: [
+					{
+						id: "redbag",
+						name: "Red Bag",
+						thumbnail: "resources/bag.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Red Bag/metadata.json",
+						description: `
+						<div class="artifact-card">
+						    <h3>Red bag</h3>
+    						<p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/835" target="_blank">VHM_0086</a></p>
+    						<p><strong>Date:</strong> 1988</p>
+    						<p><strong>Donor:</strong> Đinh Hữu Quân</p>
+    						<p><strong>Description:</strong> This bag was used by Đinh Hữu Quân to store his belongings during his escape from Vietnam on June 19, 1988. When the boat’s helmsman collapsed, Quân and another passenger steered the refugee vessel through a storm. The next day, their boat was chased by armed Thai pirates but escaped unharmed. After two and a half days at sea, the boat landed safely at Pulau Redang, Terengengganu. Quân and his wife were transferred to Pulau Bidong Refugee Camp, administered by the United Nations High Commissioner for Refugees (UNHCR). There, he actively participated in camp life and contributed to daily operations through the American Refugee Committee’s (ARC) Education Project, which worked in partnership with UNHCR, earning him several certificates of commendation.</p>
+						</div>
+						`,
+						mapImage: "placeholder-map-2.jpg",
+						cameraPos: [-198.79, -409.88, 451.76],
+						cameraTarget: [124.44, -179.09, -96.48],
+						rotation: [0, 0, -Math.PI * 0.5],
+						position: [0, 0, -100]
+					},
+
+					{
+						id: "caliper",
+						name: "Caliper",
+						thumbnail: "resources/calipers.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Calipers/metadata.json",
+						description: `
+                        <div class="artifact-card">
+						    <h3>Compass and caliper</h3>
+ 						    <p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/587" target="_blank">VHM_0036</a></p>
+    						<p><strong>Date:</strong> 1987</p>
+    						<p><strong>Donor:</strong> Đoàn Việt</p>
+    						<p><strong>Description:</strong> Used by former South Vietnamese officer Đoàn Việt during his 1987 escape to Singapore, these tools were essential to navigating a small fishing boat across the South China Sea. The military compass allowed him to chart latitude and longitude with hand-drawn nautical maps, while the calipers helped measure distance and plot bearings. Because unauthorized travel was banned, acquiring such instruments was dangerous—Đoàn obtained them through black-market networks at great personal risk.</p>
+						</div>
+                        `,
+						cameraPos: [104.08, -281.53, -88.21],
+						cameraTarget: [43.35, -108.22, -31.36],
+						rotation: [0, 0, -Math.PI * 0.5],
+						position: [0, 0, -100]
+					},
+
+					{
+						id: "compass",
+						name: "Compass",
+						thumbnail: "resources/compass.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Compass/metadata.json",
+						description: `
+                        <div class="artifact-card">
+						    <h3>Compass and caliper</h3>
+ 						    <p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/588" target="_blank">VHM_0037</a></p>
+    						<p><strong>Date:</strong> 1987</p>
+    						<p><strong>Donor:</strong> Đoàn Việt</p>
+    						<p><strong>Description:</strong> Used by former South Vietnamese officer Đoàn Việt during his 1987 escape to Singapore, these tools were essential to navigating a small fishing boat across the South China Sea. The military compass allowed him to chart latitude and longitude with hand-drawn nautical maps, while the calipers helped measure distance and plot bearings. Because unauthorized travel was banned, acquiring such instruments was dangerous—Đoàn obtained them through black-market networks at great personal risk.</p>
+						</div>
+                        `,
+						cameraPos: [301.70, -15.20, -69.07],
+						cameraTarget: [75.83, -59.12, -25.72],
+						rotation: [0, 0, -Math.PI * 0.5],
+						position: [0, 0, -100]
+					},
+				]
+			},
+			"refugee-camp": {
+				name: "Refugee Camp",
+				objects: [
+					{
+						id: "trunk_copy",
+						name: "Trunk (Refugee)",
+						thumbnail: "resources/trunk.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Trunk/metadata.json",
+						description: `
+                        <div class="artifact-card">
+                            <h3>Wooden chest</h3>
+                            <p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/466" target="_blank">VHM_0019</a></p>
+                            <p><strong>Date:</strong> c. 1990s</p>
+                            <p><strong>Donor:</strong> Lê Xuân Mùi</p>
+                            <p><strong>Description:</strong> This chest was made out of repurposed materials at the Galang refugee camp in Indonesia by Lê Xuân Mùi. The wood comes from the boards of the rotting barracks at the camp and the aluminum handle and clasps are made from materials (e.g. pots) issued by UNHCR. This chest was used to hold mementos from Lê Xuân Mùi's time at the refugee camp. Since Lê Xuân Mùi arrived at the Galang refugee camp on March 13, 1990, after the adoption of the Comprehensive Plan of Action, he was not automatically granted refugee status and was subject to screening to qualify as a refugee. He was ultimately repatriated to Vietnam on August 19, 1996.</p>
+                        </div>
+                        `,
+						mapImage: "placeholder-map-2.jpg",
+						cameraPos: [225, -1000, 0],
+						cameraTarget: [220, 0, 0],
+						rotation: [0, 0, -Math.PI * 0.5],
+						position: [0, 0, -100]
+					},
+
+					{
+						id: "camera",
+						name: "Camera",
+						thumbnail: "resources/camera.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Camera/metadata.json",
+						description: `
+                        <div class="artifact-card">
+    						<h3>Camera</h3>
+    						<p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/598" target="_blank">VHM_0047</a></p>
+    						<p><strong>Date:</strong> post-1975</p>
+    						<p><strong>Donor:</strong> Lê Phú Minh</p>
+    						<p><strong>Description:</strong> This camera was used by Lê Phú Minh to earn a living during her time at a refugee camp in the Philippines. She borrowed money to purchase it and used it to take portraits of fellow refugees. The printed photos were sold in exchange for pisos—a common currency in the camp, often sent by relatives abroad or earned through local labor. When she resettled in the UnitedStates, she brought the camera with her. None of the original photographs remain, as all were distributed at the time and no film was preserved.</p>
+						</div>
+                        `,
+						cameraPos: [284.51, -24.26, -106.39],
+						cameraTarget: [48.07, -112.73, -28.52],
+						rotation: [0, 0, -Math.PI * 0.5],
+						position: [0, 0, -100]
+					},
+
+					{
+						id: "boat",
+						name: "Model Boat",
+						thumbnail: "resources/boat.png",
+						cloudUrl: "https://potree-test2.s3.us-west-2.amazonaws.com/VHM/Model_Boat/model_boat_potree/metadata.json",
+						description: `
+						<div class="artifact-card">
+						<h3>Model of refugee boat</h3>
+    					<p><strong>RMCI Database No.:</strong> <a href="https://dal.ucla.edu/rmci/node/606" target="_blank">VHM_0055</a></p>
+    					<p><strong>Date:</strong> 1984</p>
+    					<p><strong>Donor:</strong> Sandra Nicholl</p>
+    					<p><strong>Description:</strong> This model of a refugee boat was gifted to Bruce Nicholl in 1984 by a group of
+						Vietnamese refugees who had interviewed with him for resettlement in the United States while
+						they were at the Pulau Bidong refugee camp in August 1977. The boat is a model of the fishing
+						boat the refugees had used to flee Vietnam the year before. The model is made from pieces of
+						wooden crates originally used to transport vegetables and fruits to the island.</p>
+						</div>
+						`,
+						cameraPos: [284.92, 173.30, 609.85],
+						cameraTarget: [284.92, 173.30, 64.91],
+						rotation: [0, 0, 0],
+						position: [0, 0, -100]
+					}
+				]
+			}
+		};
+
+		// --- 2. POTREE VIEWER SETUP ---
+		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+		viewer.loadSettingsFromURL();
+		viewer.setEDLEnabled(true);
+		viewer.setFOV(60);
+		viewer.setPointBudget(4 * 1000 * 1000);
+		viewer.setMinNodeSize(0);
+		viewer.loadGUI(() => {
+			$("#potree_render_area .potree_menu_toggle").hide();
+		});
+
+		// Secondary Viewer Setup
+		window.viewer2 = new Potree.Viewer(document.getElementById("potree_render_area2"));
+		viewer2.loadSettingsFromURL();
+		viewer2.setEDLEnabled(true);
+		viewer2.setFOV(60);
+		viewer2.setPointBudget(4 * 1000 * 1000);
+		viewer2.setMinNodeSize(0);
+		viewer2.loadGUI(() => {
+			$("#potree_render_area2 .potree_menu_toggle").hide();
+		});
+
+		// DECOUPLED: The camera sync listener has been removed so the viewers move independently.
+
+		// --- 3. GLOBAL STATE ---
+		window.allPointClouds = []; 
+		let currentVisibleCloud = null;
+		let currentActiveObject = null;
+		let isTextureToggled = false; 
+		
+		const categoryTabsContainer = document.querySelector("#category-tabs ul");
+		const thumbnailsContainer = document.getElementById("object-thumbnails-container");
+		const infoBox = document.getElementById("info-box");
+		const infoBoxContent = document.getElementById("info-box-content");
+
+		// --- 4. CORE FUNCTIONS ---
+
+		const formatVec = (v) => {
+			if (!v) return "N/A";
+			const x = v.x !== undefined ? v.x : v[0];
+			const y = v.y !== undefined ? v.y : v[1];
+			const z = v.z !== undefined ? v.z : v[2];
+			return `[${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}]`;
+		};
+
+		const formatRot = (r) => {
+			if (!r) return "N/A";
+			const x = r.x.toFixed(3);
+			const y = r.y.toFixed(3);
+			const z = r.z.toFixed(3);
+			return `[${x}, ${y}, ${z}]`;
+		}
+
+		function copyToClipboard(text) {
+			if (!navigator.clipboard) {
+				console.warn("Clipboard API not available");
+				return;
+			}
+			navigator.clipboard.writeText(text).then(() => {
+				console.log("Copied to clipboard:", text);
+			}).catch(err => {
+				console.error("Failed to copy:", err);
+			});
+		}
+
+		function loadAllObjects() {
+			let uniqueUrls = new Map();
+			let compareUrls = new Map();
+
+			for (const categoryId in museumData) {
+				museumData[categoryId].objects.forEach(obj => {
+					// Register primary point cloud
+					if (!uniqueUrls.has(obj.cloudUrl)) {
+						uniqueUrls.set(obj.cloudUrl, { name: obj.name, dependents: [obj] });
+					} else {
+						uniqueUrls.get(obj.cloudUrl).dependents.push(obj);
+					}
+
+					// Register secondary compare point cloud, if one exists
+					if (obj.compareUrl) {
+						if (!compareUrls.has(obj.compareUrl)) {
+							compareUrls.set(obj.compareUrl, { name: obj.name + " Compare", dependents: [obj] });
+						} else {
+							compareUrls.get(obj.compareUrl).dependents.push(obj);
+						}
+					}
+				});
+			}
+
+			// Load primary clouds into Viewer 1
+			uniqueUrls.forEach((data, url) => {
+				Potree.loadPointCloud(url, data.name, function (e) {
+					e.pointcloud.visible = false; 
+					viewer.scene.addPointCloud(e.pointcloud);
+					window.allPointClouds.push(e.pointcloud);
+
+					data.dependents.forEach(objectData => {
+						objectData.pointcloud = e.pointcloud;
+						let material = e.pointcloud.material;
+						material.pointColorType = Potree.PointColorType.RGBA;
+						material.size = 0.66;
+						material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+						material.shape = Potree.PointShape.CIRCLE;
+					});
+				});
+			});
+
+			// Load secondary clouds into Viewer 2
+			compareUrls.forEach((data, url) => {
+				Potree.loadPointCloud(url, data.name, function (e) {
+					e.pointcloud.visible = false; 
+					viewer2.scene.addPointCloud(e.pointcloud);
+
+					data.dependents.forEach(objectData => {
+						objectData.comparePointcloud = e.pointcloud;
+						let material = e.pointcloud.material;
+						material.pointColorType = Potree.PointColorType.RGBA;
+						material.size = 0.66;
+						material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+						material.shape = Potree.PointShape.CIRCLE;
+					});
+				});
+			});
+		}
+
+		function populateCategoryTabs() {
+			categoryTabsContainer.innerHTML = ""; 
+			for (const categoryId in museumData) {
+				const category = museumData[categoryId];
+				const tab = document.createElement("li");
+				tab.innerText = category.name;
+				tab.dataset.categoryId = categoryId;
+				tab.addEventListener("click", () => showCategory(categoryId));
+				categoryTabsContainer.appendChild(tab);
+			}
+		}
+
+		function populateThumbnails(categoryId) {
+			thumbnailsContainer.innerHTML = ""; 
+			const objects = museumData[categoryId].objects;
+
+			objects.forEach(objectData => {
+				const btn = document.createElement("div");
+				btn.className = "thumbnail-button";
+				
+				const img = document.createElement("img");
+				img.src = objectData.thumbnail;
+				img.className = "thumbnail-image";
+				img.dataset.objectId = objectData.id;
+
+				img.addEventListener("click", () => {
+					showModel(objectData);
+					
+					thumbnailsContainer.querySelectorAll(".thumbnail-image").forEach(t => t.classList.remove("active"));
+					img.classList.add("active");
+				});
+
+				btn.appendChild(img);
+				thumbnailsContainer.appendChild(btn);
+			});
+		}
+
+		function showCategory(categoryId) {
+			categoryTabsContainer.querySelectorAll("li").forEach(tab => {
+				tab.classList.toggle("active", tab.dataset.categoryId === categoryId);
+			});
+
+			populateThumbnails(categoryId);
+
+			if (currentVisibleCloud) {
+				currentVisibleCloud.visible = false;
+				currentVisibleCloud = null;
+			}
+			infoBox.style.display = "none";
+			currentActiveObject = null;
+			
+			const firstObject = museumData[categoryId].objects[0];
+			if (firstObject) {
+				
+				const showFirstObject = () => {
+					if (firstObject.pointcloud) {
+						showModel(firstObject);
+						
+						const firstThumb = thumbnailsContainer.querySelector(".thumbnail-image");
+						if(firstThumb) firstThumb.classList.add("active");
+					} else {
+						console.log("Waiting for", firstObject.name, "to load...");
+						setTimeout(showFirstObject, 200); 
+					}
+				};
+				
+				showFirstObject();
+				
+			} else {
+				 window.allPointClouds.forEach(p => {
+					p.visible = false;
+				 });
+				 currentVisibleCloud = null;
+			}
+		}
+
+		function showModel(objectData) {
+			if (!objectData || !objectData.pointcloud) {
+				console.warn("Attempted to show a model that is not loaded yet:", objectData);
+				return;
+			}
+			
+			// Hide all primary clouds
+			window.allPointClouds.forEach(p => {
+				p.visible = false;
+			});
+
+			// Hide all secondary clouds
+			viewer2.scene.pointclouds.forEach(p => {
+				p.visible = false;
+			});
+
+			objectData.pointcloud.visible = true;
+			objectData.pointcloud.rotation.set(...objectData.rotation);
+			objectData.pointcloud.position.set(...objectData.position);
+			currentVisibleCloud = objectData.pointcloud;
+			currentActiveObject = objectData;
+
+			const area1 = document.getElementById("potree_render_area");
+			const area2 = document.getElementById("potree_render_area2");
+
+			// Layout Trigger Logic
+			if (objectData.comparePointcloud) {
+				// Turn on split view
+				area1.style.width = "50%";
+				area2.style.display = "block";
+				
+				objectData.comparePointcloud.visible = true;
+				objectData.comparePointcloud.rotation.set(...objectData.rotation);
+				objectData.comparePointcloud.position.set(...objectData.position);
+			} else {
+				// Turn on standard single view
+				area1.style.width = "100%";
+				area2.style.display = "none";
+			}
+
+			isTextureToggled = false;
+			
+			// Reset main viewer visual settings
+			const material = currentVisibleCloud.material;
+			material.activeAttributeName = "rgba";
+			viewer.setEDLEnabled(true);
+			viewer.setEDLStrength(1.0);
+			viewer.scene.view.position.set(...objectData.cameraPos);
+			viewer.scene.view.lookAt(...objectData.cameraTarget);
+
+			// Reset secondary viewer visual settings if active
+			if (objectData.comparePointcloud) {
+				const material2 = objectData.comparePointcloud.material;
+				material2.activeAttributeName = "rgba";
+				viewer2.setEDLEnabled(true);
+				viewer2.setEDLStrength(1.0);
+				// Ensure viewer 2 is also aimed at the target when first loaded
+				viewer2.scene.view.position.set(...objectData.cameraPos);
+				viewer2.scene.view.lookAt(...objectData.cameraTarget);
+			}
+
+			infoBoxContent.innerHTML = objectData.description;
+			infoBox.style.display = "flex";
+		}
+		
+		function setupCameraDebugDisplay() {
+			const elCamPos = document.getElementById("debug-cam-pos");
+			const elCamTarget = document.getElementById("debug-cam-target");
+			const elObjPos = document.getElementById("debug-obj-pos");
+			const elObjRot = document.getElementById("debug-obj-rot");
+
+			setInterval(() => {
+				const camPos = viewer.scene.view.position;
+				const camTarget = viewer.scene.view.getPivot();
+
+				elCamPos.innerText = formatVec(camPos);
+				elCamTarget.innerText = formatVec(camTarget);
+
+				if (currentVisibleCloud) {
+					elObjPos.innerText = formatVec(currentVisibleCloud.position);
+					elObjRot.innerText = formatRot(currentVisibleCloud.rotation);
+				} else {
+					elObjPos.innerText = "N/A";
+					elObjRot.innerText = "N/A";
+				}
+
+			}, 250);
+		}
+
+		function setupDebugToggle() {
+			const debugPanel = document.getElementById("debug-info-floater");
+			
+			window.addEventListener("keydown", (e) => {
+				if (e.key === 'd' || e.key === 'D') {
+					debugPanel.classList.toggle("debug-hidden");
+				}
+			});
+		}
+
+		function setupTextureToggle() {
+			window.addEventListener("keydown", (e) => {
+				if (e.key !== 't' && e.key !== 'T') {
+					return;
+				}
+
+				if (!currentVisibleCloud) {
+					return;
+				}
+
+				const material = currentVisibleCloud.material;
+
+				if (isTextureToggled) {
+					material.activeAttributeName = "rgba";
+					viewer.setEDLEnabled(true);
+					viewer.setEDLStrength(1.0);
+					isTextureToggled = false;
+				} else {
+					material.activeAttributeName = "classification";
+					viewer.setEDLEnabled(2.0);
+					isTextureToggled = true;
+				}
+			});
+		}
+
+		function setupClipboardKeys() {
+			window.addEventListener("keydown", (e) => {
+				let textToCopy = "";
+
+				switch (e.key) {
+					case 'o':
+						textToCopy = formatVec(viewer.scene.view.position);
+						break;
+					case 'p':
+						textToCopy = formatVec(viewer.scene.view.getPivot());
+						break;
+					case 'k':
+						if (currentVisibleCloud) {
+							textToCopy = formatVec(currentVisibleCloud.position);
+						} else {
+							console.log("No object selected to copy position.");
+						}
+						break;
+					case 'l':
+						if (currentVisibleCloud) {
+							textToCopy = formatRot(currentVisibleCloud.rotation);
+						} else {
+							console.log("No object selected to copy rotation.");
+						}
+						break;
+					default:
+						return;
+				}
+
+				if (textToCopy) {
+					copyToClipboard(textToCopy);
+				}
+			});
+		}
+
+		function setupFullscreenToggle() {
+			const fsBtn = document.getElementById("fullscreen-btn");
+
+			function openFullscreen() {
+				const elem = document.documentElement;
+				const promise = (elem.requestFullscreen && elem.requestFullscreen()) ||
+								(elem.mozRequestFullScreen && elem.mozRequestFullScreen()) ||
+								(elem.webkitRequestFullscreen && elem.webkitRequestFullscreen()) ||
+								(elem.msRequestFullscreen && elem.msRequestFullscreen());
+				if (promise) {
+					promise.catch(err => {
+						console.error(`Error attempting to enter fullscreen: ${err.message} (${err.name})`);
+					});
+				} else {
+					console.warn("No fullscreen API available on this element.");
+				}
+			}
+
+			function closeFullscreen() {
+				const promise = (document.exitFullscreen && document.exitFullscreen()) ||
+								(document.mozCancelFullScreen && document.mozCancelFullScreen()) ||
+								(document.webkitExitFullscreen && document.webkitExitFullscreen()) ||
+								(document.msExitFullscreen && document.msExitFullscreen());
+				
+				if (promise) {
+					promise.catch(err => {
+						console.error(`Error attempting to exit fullscreen: ${err.message} (${err.name})`);
+					});
+				} else {
+					console.warn("No exit fullscreen API available on this document.");
+				}
+			}
+
+			function toggleFullscreen() {
+				const isFullscreen = document.fullscreenElement ||
+									document.webkitFullscreenElement ||
+									document.mozFullScreenElement ||
+									document.msFullscreenElement;
+				
+				if (isFullscreen) {
+					closeFullscreen();
+				} else {
+					openFullscreen();
+				}
+			}
+
+			function updateButtonState() {
+				const isFullscreen = document.fullscreenElement ||
+									document.webkitFullscreenElement ||
+									document.mozFullScreenElement ||
+									document.msFullscreenElement;
+				
+				if (isFullscreen) {
+					fsBtn.classList.remove("maximize");
+					fsBtn.classList.add("minimize");
+					fsBtn.title = "Exit Fullscreen";
+				} else {
+					fsBtn.classList.remove("minimize");
+					fsBtn.classList.add("maximize");
+					fsBtn.title = "Enter Fullscreen";
+				}
+			}
+
+			fsBtn.addEventListener("click", toggleFullscreen);
+
+			window.addEventListener("keydown", (e) => {
+				if (e.key === 'f' || e.key === 'F') {
+					toggleFullscreen();
+				}
+			});
+
+			document.addEventListener("fullscreenchange", updateButtonState);
+			document.addEventListener("webkitfullscreenchange", updateButtonState);
+			document.addEventListener("mozfullscreenchange", updateButtonState);
+			document.addEventListener("MSFullscreenChange", updateButtonState);
+
+			updateButtonState();
+		}
+
+		function setupInfoBoxToggle() {
+			const infoBox = document.getElementById("info-box");
+			const toggleBtn = document.getElementById("info-box-toggle");
+
+			toggleBtn.addEventListener("click", (e) => {
+				e.stopPropagation(); 
+				
+				const isCollapsed = infoBox.classList.toggle("collapsed");
+
+				if (isCollapsed) {
+					toggleBtn.innerHTML = "&#9650;"; // Up arrow
+					toggleBtn.title = "Show Details";
+				} else {
+					toggleBtn.innerHTML = "&#9660;"; // Down arrow
+					toggleBtn.title = "Hide Details";
+				}
+			});
+		}
+
+
+		// --- 5. INITIALIZATION ---
+		
+		loadAllObjects();
+		populateCategoryTabs();
+		
+		setupCameraDebugDisplay();
+		setupDebugToggle();
+		setupTextureToggle();
+		setupClipboardKeys(); 
+		
+		setupFullscreenToggle();
+		setupInfoBoxToggle();
+ 
+		showCategory("land-reform"); 
+
+	</script>
+</body>
+
+</html>

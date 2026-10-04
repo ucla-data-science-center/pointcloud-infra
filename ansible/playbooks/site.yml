@@ -1,0 +1,6 @@
+---
+- name: Configure pointcloud web server
+  hosts: web
+  become: true
+  roles:
+    - role: potree

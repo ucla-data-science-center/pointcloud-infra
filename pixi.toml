@@ -1,0 +1,53 @@
+[workspace]
+name = "pointcloud-infra"
+description = "Infrastructure and content for pointcloud.ucla.edu (Potree viewer host)"
+authors = ["UCLA Library Data Science Center <datascience@library.ucla.edu>"]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64"]
+
+# One environment holds every tool the repo needs, so `pixi install` is the
+# whole setup. Versions are locked in pixi.lock; bump them deliberately.
+[dependencies]
+python = "3.12.*"
+ansible-core = ">=2.18,<2.22"
+ansible-lint = "*"
+molecule = "*"
+yamllint = "*"
+pre-commit = "*"
+terraform = ">=1.10,<2"
+tflint = "*"
+boto3 = "*"      # aws_ec2 dynamic inventory
+botocore = "*"
+
+[pypi-dependencies]
+molecule-plugins = { version = "*", extras = ["podman"] }
+
+[tasks]
+# First-time setup: Ansible collections + git hooks
+setup = { cmd = "ansible-galaxy collection install -r requirements.yml -p collections && cd .. && pre-commit install", cwd = "ansible" }
+
+# Lint everything (same checks CI runs)
+lint = "pre-commit run --all-files"
+
+# Local staging: a systemd Ubuntu 24.04 container run by Molecule + Podman
+test = { cmd = "molecule test", cwd = "ansible", description = "Full create/converge/idempotence/verify/destroy cycle" }
+staging-up = { cmd = "molecule converge", cwd = "ansible", description = "Build or update local staging, leave it running" }
+staging-verify = { cmd = "molecule verify", cwd = "ansible" }
+staging-shell = { cmd = "molecule login", cwd = "ansible" }
+staging-down = { cmd = "molecule destroy", cwd = "ansible" }
+
+# Production
+deploy-check = { cmd = "ansible-playbook playbooks/site.yml --check --diff", cwd = "ansible", description = "Dry run against production, shows what would change" }
+deploy = { cmd = "ansible-playbook playbooks/site.yml", cwd = "ansible" }
+
+# Terraform (production AWS resources)
+tf-init = { cmd = "terraform init", cwd = "terraform" }
+tf-plan = { cmd = "terraform plan", cwd = "terraform" }
+tf-apply = { cmd = "terraform apply", cwd = "terraform" }
+
+# Quick health check of the live site (same check the scheduled GitHub Action runs)
+site-check = "bash scripts/site-check.sh"
+
+# Keep packages from ~/.local (pip --user) out of this environment.
+[activation.env]
+PYTHONNOUSERSITE = "1"

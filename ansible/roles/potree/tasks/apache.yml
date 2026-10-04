@@ -1,0 +1,78 @@
+---
+- name: Check for an existing Let's Encrypt certificate
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ potree_server_name }}/fullchain.pem"
+  register: _potree_le_cert
+
+# Until a real cert exists, Apache serves the snakeoil cert so it can start
+# and answer the ACME challenge on port 80.
+- name: Choose TLS certificate
+  ansible.builtin.set_fact:
+    _potree_tls_cert: "{{ _le | ternary('/etc/letsencrypt/live/' ~ potree_server_name ~ '/fullchain.pem', '/etc/ssl/certs/ssl-cert-snakeoil.pem') }}"
+    _potree_tls_key: "{{ _le | ternary('/etc/letsencrypt/live/' ~ potree_server_name ~ '/privkey.pem', '/etc/ssl/private/ssl-cert-snakeoil.key') }}"
+  vars:
+    _le: "{{ potree_tls_mode == 'letsencrypt' and _potree_le_cert.stat.exists }}"
+
+- name: Enable Apache modules
+  community.general.apache2_module:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - ssl
+    - rewrite
+    - headers
+    - alias
+    - autoindex
+  notify: Reload apache
+
+- name: Create ACME challenge directory
+  ansible.builtin.file:
+    path: "{{ potree_letsencrypt_webroot }}/.well-known/acme-challenge"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install hardening config
+  ansible.builtin.template:
+    src: zz-pointcloud-hardening.conf.j2
+    dest: /etc/apache2/conf-available/zz-pointcloud-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload apache
+
+- name: Enable hardening config
+  ansible.builtin.file:
+    src: ../conf-available/zz-pointcloud-hardening.conf
+    dest: /etc/apache2/conf-enabled/zz-pointcloud-hardening.conf
+    state: link
+  notify: Reload apache
+
+- name: Install site config
+  ansible.builtin.template:
+    src: pointcloud.conf.j2
+    dest: /etc/apache2/sites-available/pointcloud.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload apache
+
+- name: Enable site
+  ansible.builtin.file:
+    src: ../sites-available/pointcloud.conf
+    dest: /etc/apache2/sites-enabled/pointcloud.conf
+    state: link
+  notify: Reload apache
+
+- name: Disable default site
+  ansible.builtin.file:
+    path: /etc/apache2/sites-enabled/000-default.conf
+    state: absent
+  notify: Reload apache
+
+- name: Start Apache
+  ansible.builtin.systemd_service:
+    name: apache2
+    state: started
+    enabled: true

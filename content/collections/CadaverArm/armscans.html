@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="description" content="">
+	<meta name="author" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>Cadaver Arm Dissection</title>
+	
+	<link rel="stylesheet" type="text/css" href="../build/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="../libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="../libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jstree/themes/mixed/style.css">
+</head>
+
+<body>
+	<script src="../libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="../libs/spectrum/spectrum.js"></script>
+	<script src="../libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="../libs/three.js/build/three.min.js"></script>
+	<script src="../libs/three.js/extra/lines.js"></script>
+	<script src="../libs/other/BinaryHeap.js"></script>
+	<script src="../libs/tween/tween.min.js"></script>
+	<script src="../libs/d3/d3.js"></script>
+	<script src="../libs/proj4/proj4.js"></script>
+	<script src="../libs/openlayers3/ol.js"></script>
+	<script src="../libs/i18next/i18next.js"></script>
+	<script src="../libs/jstree/jstree.js"></script>
+	<script src="../build/potree/potree.js"></script>
+	<script src="../libs/plasio/js/laslaz.js"></script>
+
+	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
+		<div id="potree_render_area"></div>
+		<div id="potree_sidebar_container"></div>
+	</div>
+	
+	<script>
+		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+		viewer.setEDLEnabled(true);
+		viewer.setFOV(60);
+		viewer.setPointBudget(1 * 1000 * 1000);
+		// viewer.setMinNodeSize(10);
+		viewer.loadSettingsFromURL();
+		viewer.setDescription(`Cadaver Arm Dissection`);
+
+		let scene = new Potree.Scene();
+		viewer.setScene(scene);
+
+		viewer.loadGUI(() => { //Toggle on load
+			viewer.setLanguage('en');
+			$("#menu_scene").next().show(); 
+			$("#menu_tools").next().show();
+		});
+
+		scene.view.position.set(500, -200, 1000); //camera position
+		scene.view.lookAt(500, 200, 200); //camera target
+
+		Potree.loadPointCloud("https://potree-test2.s3.us-west-2.amazonaws.com/Anatomy/armscans_dayone/metadata.json", "Day 1", e => {
+			viewer.scene.addPointCloud(e.pointcloud);
+
+			let material = e.pointcloud.material;
+			material.activeAttributeName = "rgba";
+			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+			material.shape = Potree.PointShape.CIRCLE;
+
+			e.pointcloud.position.set(0, 0, 0);
+			e.pointcloud.rotation.set(Math.PI * .05, 0, 0);
+		});
+
+		Potree.loadPointCloud("https://potree-test2.s3.us-west-2.amazonaws.com/Anatomy/armscans_daytwo/metadata.json", "Day 2", e => {
+			viewer.scene.addPointCloud(e.pointcloud);
+
+			let material = e.pointcloud.material;
+			material.activeAttributeName = "rgba";
+			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+			material.shape = Potree.PointShape.CIRCLE;
+
+			e.pointcloud.position.set(450, 0, 0);
+			e.pointcloud.rotation.set(0, 0, 0);
+		});
+
+		Potree.loadPointCloud("https://potree-test2.s3.us-west-2.amazonaws.com/Anatomy/armscan_daythree/metadata.json", "Day 3", e => {
+
+			viewer.scene.addPointCloud(e.pointcloud);
+
+			let material = e.pointcloud.material;
+			material.activeAttributeName = "rgba";
+			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+			material.shape = Potree.PointShape.CIRCLE;
+
+			e.pointcloud.position.set(1000, 0, 0);
+			e.pointcloud.rotation.set(Math.PI * -.40, Math.PI * -.22, Math.PI * -.65);
+		});
+
+		//Annotations
+		
+		{
+			let twoFCR = new Potree.Annotation({
+				position: [503, 228, 178],
+				title: `Flexor Carpi Radialis m.`,
+				cameraPosition: [482, 313, 136],
+				cameraTarget: [503, 223, 178],
+			});
+			scene.annotations.add(twoFCR);
+
+			let measure = new Potree.Measure();
+			measure.name = "Flexor Carpi Radialis m.";
+			measure.addMarker(new THREE.Vector3(503, 223, 178));
+			measure.showDistances = false;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let twoPL = new Potree.Annotation({
+				position: [499, 263, 204],
+				title: `Palmaris Longus m.`,
+				cameraPosition: [482, 313, 136],
+				cameraTarget: [499, 257, 204],
+			});
+			scene.annotations.add(twoPL);
+
+			let measure = new Potree.Measure();
+			measure.name = "Palmaris Longus m.";
+			measure.addMarker(new THREE.Vector3(499, 257, 204));
+			measure.showDistances = false;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let twoFDS = new Potree.Annotation({
+				position: [494, 249, 198],
+				title: `Flexor Digitorum Superficialis m.`,
+				cameraPosition: [482, 313, 136],
+				cameraTarget: [484, 249, 198],
+			});
+			scene.annotations.add(twoFDS);
+
+			let measure = new Potree.Measure();
+			measure.name = "Flexor Digitorum Superficialis m.";
+			measure.addMarker(new THREE.Vector3(494, 249, 198));
+			measure.addMarker(new THREE.Vector3(484, 249, 197));
+			measure.showDistances = false;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let twoFCU = new Potree.Annotation({
+				position: [482, 254, 204],
+				title: `Flexor Carpi Ulnaris m.`,
+				cameraPosition: [482, 313, 136],
+				cameraTarget: [482, 254, 204],
+			});
+			scene.annotations.add(twoFCU);
+
+			let measure = new Potree.Measure();
+			measure.name = "Flexor Carpi Ulnaris m.";
+			measure.addMarker(new THREE.Vector3(482, 254, 204));
+			measure.addMarker(new THREE.Vector3(482, 249, 200));
+			measure.closed = false;
+			measure.showDistances = false;
+			scene.addMeasurement(measure);
+		}
+
+		//SCAN 3
+		{
+			let annotation = new Potree.Annotation({
+				position: [910, 231, 220],
+				title: `Ulnar artery`,
+				cameraPosition: [925, 260, 104],
+				cameraTarget: [912, 223, 213],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Ulnar artery";
+			measure.addMarker(new THREE.Vector3(910, 229, 219));
+			measure.addMarker(new THREE.Vector3(912, 223, 213));
+			measure.showDistances = false;
+			scene.addMeasurement(measure);
+		}
+
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [936, 219, 230],
+				title: `Brachioradialis m.`,
+				cameraPosition: [1076, 151, 262],
+				cameraTarget: [936, 218, 229],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Brachioradialis m.";
+			measure.addMarker(new THREE.Vector3(936.40, 218.31, 229.51));
+			measure.addMarker(new THREE.Vector3(939.84, 205.44, 218.97));
+			measure.showDistances = false;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [929, 178, 209],
+				title: `Extensor carpi radialis brevis m.`,
+				cameraPosition: [915, 61, 243],
+				cameraTarget: [928, 171, 203],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Extensor carpi radialis brevis m.";
+			measure.addMarker(new THREE.Vector3(929, 177, 208));
+			measure.addMarker(new THREE.Vector3(930, 164, 197));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [935, 197, 217],
+				title: `Extensor carpi radialis longus m.`,
+				cameraPosition: [961, 95, 234],
+				cameraTarget: [935, 191, 214],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Extensor carpi radialis longus m.";
+			measure.addMarker(new THREE.Vector3(934, 196, 217));
+			measure.addMarker(new THREE.Vector3(935, 186, 210));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [923, 218, 246],
+				title: `Abductor pollicis longus m.`,
+				cameraPosition: [945, 122, 282],
+				cameraTarget: [923, 216, 244],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Abductor pollicis longus m.";
+			measure.addMarker(new THREE.Vector3(926, 218, 246));
+			measure.addMarker(new THREE.Vector3(922, 214, 242));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [924, 230, 255],
+				title: `Extensor pollicis brevis m.`,
+				cameraPosition: [947, 135, 337],
+				cameraTarget: [921, 228, 254],
+			});
+
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Extensor pollicis brevis m.";
+			measure.addMarker(new THREE.Vector3(920, 226, 252));
+			measure.addMarker(new THREE.Vector3(923, 228, 255));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [907, 216, 239],
+				title: `Extensor digitorum m.`,
+				cameraPosition: [860, 148, 275],
+				cameraTarget: [906, 216, 238],
+			});
+
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Extensor digitorum m.";
+			measure.addMarker(new THREE.Vector3(906, 216, 238));
+			measure.addMarker(new THREE.Vector3(909, 216, 239));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [907, 216, 239],
+				title: `Extensor digitorum m.`,
+				cameraPosition: [860, 148, 275],
+				cameraTarget: [906, 216, 238],
+			});
+
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Extensor digitorum m.";
+			measure.addMarker(new THREE.Vector3(906, 216, 238));
+			measure.addMarker(new THREE.Vector3(909, 216, 239));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [937, 282, 275],
+				title: `Extensor pollcis longus m.`,
+				cameraPosition: [957, 309, 426],
+				cameraTarget: [937, 282, 275],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Extensor pollcis longus m.";
+			measure.addMarker(new THREE.Vector3(937, 282, 275));
+			measure.addMarker(new THREE.Vector3(940, 291, 274));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [934, 302, 250],
+				title: `Abductor pollicis brevis m.`,
+				cameraPosition: [918, 320, 147],
+				cameraTarget: [942, 310, 251],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Abductor pollicis brevis m.";
+			measure.addMarker(new THREE.Vector3(942, 310, 251));
+			measure.addMarker(new THREE.Vector3(934, 302, 250));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [932, 312, 256],
+				title: `Flexor pollicis brevis m.`,
+				cameraPosition: [918, 320, 147],
+				cameraTarget: [932, 312, 256],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Flexor pollicis brevis m.";
+			measure.addMarker(new THREE.Vector3(938, 319, 255));
+			measure.addMarker(new THREE.Vector3(932, 312, 256));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [888, 292, 259],
+				title: `Abductor digiti minimi m.`,
+				cameraPosition: [907, 321,],
+				cameraTarget: [886, 307, 265],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Abductor digiti minimi m.";
+			measure.addMarker(new THREE.Vector3(886, 307, 265));
+			measure.addMarker(new THREE.Vector3(888, 292, 259));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [891, 316, 266],
+				title: `Flexor digiti minimi brevis m.`,
+				cameraPosition: [923, 331, 75],
+				cameraTarget: [893, 306, 261],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Flexor digiti minimi brevis m.";
+			measure.addMarker(new THREE.Vector3(893, 306, 261));
+			measure.addMarker(new THREE.Vector3(891, 316, 266));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+
+		{
+			let annotation = new Potree.Annotation({
+				position: [913, 310, 263],
+				title: `Palmar aponeurosis`,
+				cameraPosition: [916, 318, 170],
+				cameraTarget: [913, 310, 263],
+			});
+			scene.annotations.add(annotation);
+
+			let measure = new Potree.Measure();
+			measure.name = "Palmar aponeurosis";
+			measure.addMarker(new THREE.Vector3(913, 310, 263));
+			measure.addMarker(new THREE.Vector3(914, 301, 258));
+			measure.showDistances = false;
+			measure.closed = true;
+			scene.addMeasurement(measure);
+		}
+	</script>
+</body>
+</html>

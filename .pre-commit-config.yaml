@@ -1,0 +1,48 @@
+---
+# Local hooks call tools through `pixi run`, so a plain `git commit` uses the
+# versions locked in pixi.lock even outside `pixi shell`.
+# Run everything with `pixi run lint`.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^content/
+      - id: end-of-file-fixer
+        exclude: ^content/
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=2048"]
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: yamllint
+        name: yamllint
+        entry: pixi run -- yamllint --strict
+        language: system
+        types: [yaml]
+      - id: ansible-lint
+        name: ansible-lint
+        entry: pixi run -- bash -c 'cd ansible && ansible-lint'
+        language: system
+        pass_filenames: false
+        files: ^ansible/
+      - id: terraform-fmt
+        name: terraform fmt
+        entry: pixi run -- terraform fmt -check -recursive -diff terraform
+        language: system
+        pass_filenames: false
+        files: ^terraform/
+      - id: terraform-validate
+        name: terraform validate
+        entry: pixi run -- bash -c 'cd terraform && terraform init -backend=false -input=false >/dev/null && terraform validate'
+        language: system
+        pass_filenames: false
+        files: ^terraform/
+      - id: tflint
+        name: tflint
+        entry: pixi run -- bash -c 'cd terraform && tflint --init >/dev/null && tflint'
+        language: system
+        pass_filenames: false
+        files: ^terraform/

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrated Point Cloud Article</title>
+    
+    <link rel="stylesheet" type="text/css" href="../build/potree/potree.css">
+    <link rel="stylesheet" type="text/css" href="../libs/jquery-ui/jquery-ui.min.css">
+    <link rel="stylesheet" type="text/css" href="../libs/openlayers3/ol.css">
+    <link rel="stylesheet" type="text/css" href="../libs/spectrum/spectrum.css">
+    <link rel="stylesheet" type="text/css" href="../libs/jstree/themes/mixed/style.css">
+
+    <style>
+        /* --- 1. PAGE LAYOUT STYLES --- */
+        html, body {
+            height: auto !important; /* Allow page to grow */
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-y: auto !important; /* ENABLE SCROLLING */
+            font-family: 'Georgia', serif; /* Article font */
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .article-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px 60px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        h1 { font-size: 3em; margin-bottom: 0.2em; line-height: 1.1; }
+        h2 { color: #555; font-weight: normal; margin-top: 0; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
+        p { font-size: 1.2em; line-height: 1.6; margin-bottom: 20px; }
+
+        /* --- 2. POTREE EMBED STYLES --- */
+        #potree-embed-wrapper {
+            width: 100%;
+            height: 60vh; /* Takes up 60% of the viewport height */
+            margin: 40px 0; /* Spacing from text */
+            position: relative;
+            border: 1px solid #ccc;
+            background: #000;
+        }
+
+        /* Override Potree's absolute positioning to stay inside our wrapper */
+        .potree_container {
+            position: absolute; 
+            width: 100%; 
+            height: 100%; 
+            left: 0; 
+            top: 0;
+        }
+        
+        /* Optional: Hide the sidebar initially to look more like an 'image' */
+        #potree_sidebar_container { display: none; }
+    </style>
+</head>
+
+<body>
+
+    <div class="article-container">
+        
+        <h1>The Path of the Righteous Man</h1>
+        <h2>A study in tyranny and shepherds</h2>
+        <p><i>By Jules Winnfield</i></p>
+
+        <p>The path of the righteous man is beset on all sides by the inequities of the selfish and the tyranny of evil men. Blessed is he who, in the name of charity and good will, shepherds the weak through the valley of the darkness. For he is truly his brother's keeper and the finder of lost children.</p>
+        
+        <p>And I will strike down upon thee with great vengeance and furious anger those who attempt to poison and destroy my brothers. And you will know I am the Lord when I lay my vengeance upon you.</p>
+
+        <div id="potree-embed-wrapper">
+            <div id="potree_render_area" class="potree_container"></div>
+            <div id="potree_sidebar_container"></div> </div>
+        <p style="font-size: 0.9em; color: #666; text-align: center;"><i>Fig 1. Interactive 3D Scan of Iceland (Scroll over to zoom, Click to rotate)</i></p>
+        <p>Now... I been sayin' that shit for years. And if you ever heard it, that meant your ass. You'd be dead right now. I never gave much thought to what it meant. I just thought it was a cold-blooded thing to say to a motherfucker before I popped a cap in his ass.</p>
+
+        <p>But I saw some shit this mornin' made me think twice. See, now I'm thinking: maybe it means you're the evil man. And I'm the righteous man. And Mr. 9mm here... he's the shepherd protecting my righteous ass in the valley of darkness. Or it could mean you're the righteous man and I'm the shepherd and it's the world that's evil and selfish.</p>
+
+        <p>I'd like that. But that shit ain't the truth. The truth is you're the weak. And I'm the tyranny of evil men. But I'm tryin', Ringo. I'm tryin' real hard to be the shepherd.</p>
+
+    </div>
+
+    <script src="../libs/jquery/jquery-3.1.1.min.js"></script>
+    <script src="../libs/spectrum/spectrum.js"></script>
+    <script src="../libs/jquery-ui/jquery-ui.min.js"></script>
+    <script src="../libs/three.js/build/three.min.js"></script>
+    <script src="../libs/other/BinaryHeap.js"></script>
+    <script src="../libs/tween/tween.min.js"></script>
+    <script src="../libs/d3/d3.js"></script>
+    <script src="../libs/proj4/proj4.js"></script>
+    <script src="../libs/openlayers3/ol.js"></script>
+    <script src="../libs/i18next/i18next.js"></script>
+    <script src="../libs/jstree/jstree.js"></script>
+    <script src="../build/potree/potree.js"></script>
+    <script src="../libs/plasio/js/laslaz.js"></script>
+
+    <script>
+        // Initialize Viewer
+        window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+        
+        viewer.setEDLEnabled(true);
+        viewer.setFOV(60);
+        viewer.setPointBudget(2 * 1000 * 1000); // Lower budget for smoother scrolling
+        viewer.setBackground("black"); 
+        
+        // Disable the sidebar so it looks like a clean embed
+        // viewer.loadGUI(...) // Skipped to keep it looking like an image
+        
+        // Load the Point Cloud
+        Potree.loadPointCloud("https://potree-test2.s3.us-west-2.amazonaws.com/Iceland/Torfljar/metadata.json", "Iceland", function(e){
+            viewer.scene.addPointCloud(e.pointcloud);
+            
+            let material = e.pointcloud.material;
+            material.size = 0.8;
+            material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+            
+            viewer.fitToScreen();
+        });
+
+        // --- UX TWEAK: PREVENT SCROLL TRAP ---
+        // By default, your mouse wheel will get stuck 'zooming' the model instead of scrolling the page.
+        // This simple logic helps:
+        
+        const renderArea = document.getElementById("potree_render_area");
+        
+        // Optional: Only enable interaction when the user CLICKS the viewer
+        // renderArea.style.pointerEvents = "none"; 
+        // renderArea.onclick = () => { renderArea.style.pointerEvents = "auto"; }
+        // renderArea.onmouseleave = () => { renderArea.style.pointerEvents = "none"; }
+    </script>
+</body>
+</html>

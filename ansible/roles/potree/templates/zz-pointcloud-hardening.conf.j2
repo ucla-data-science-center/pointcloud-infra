@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+# Named zz-* so it loads after Debian's security.conf and wins.
+ServerTokens Prod
+ServerSignature Off
+TraceEnable Off
+
+Header always set X-Content-Type-Options "nosniff"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+# No X-Frame-Options: collection pages may be embedded in other sites; leave framing allowed.

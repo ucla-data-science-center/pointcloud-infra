@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+
+# Where you run Ansible from. UCLA campus ranges are listed for reference;
+# add your VPN egress or home IP (/32) as needed.
+admin_ssh_cidrs = [
+  "164.67.0.0/16",
+  "128.97.0.0/16",
+  "131.179.0.0/16",
+  "169.232.0.0/16",
+]
+
+# Flip to "new" to cut over, back to "legacy" to roll back.
+eip_target = "legacy"

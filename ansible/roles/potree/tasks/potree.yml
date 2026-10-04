@@ -1,0 +1,39 @@
+---
+- name: Create Potree directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ potree_install_root }}"
+    - /var/cache/potree
+    - "{{ potree_web_root }}"
+
+- name: Download Potree release
+  ansible.builtin.get_url:
+    url: "{{ potree_release_url }}"
+    dest: "/var/cache/potree/Potree_{{ potree_version }}.zip"
+    checksum: "{{ potree_release_checksum }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Unpack Potree release
+  ansible.builtin.unarchive:
+    src: "/var/cache/potree/Potree_{{ potree_version }}.zip"
+    dest: "{{ potree_install_root }}"
+    remote_src: true
+    creates: "{{ potree_install_root }}/Potree_{{ potree_version }}/build/potree/potree.js"
+
+# Collection pages load ../build and ../libs, so both live at the web root.
+- name: Link active Potree release into the web root
+  ansible.builtin.file:
+    src: "{{ potree_install_root }}/Potree_{{ potree_version }}/{{ item }}"
+    dest: "{{ potree_web_root }}/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - build
+    - libs

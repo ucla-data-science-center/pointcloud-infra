@@ -1,0 +1,48 @@
+---
+# Validated automatically before the role runs; typos and bad values fail fast.
+argument_specs:
+  main:
+    short_description: Serve Potree collections from Apache with TLS
+    options:
+      potree_version:
+        type: str
+        required: true
+        description: Upstream Potree release tag.
+      potree_release_url:
+        type: str
+        required: true
+      potree_release_checksum:
+        type: str
+        required: true
+        description: "Checksum of the release zip, as algorithm:hex."
+      potree_install_root:
+        type: path
+      potree_web_root:
+        type: path
+      potree_content_src:
+        type: str
+        description: Local directory of collection folders; empty to skip.
+      potree_server_name:
+        type: str
+        required: true
+      potree_server_aliases:
+        type: list
+        elements: str
+      potree_tls_mode:
+        type: str
+        choices: [letsencrypt, selfsigned]
+      potree_letsencrypt_email:
+        type: str
+      potree_letsencrypt_webroot:
+        type: path
+      potree_hsts_max_age:
+        type: int
+      potree_autoindex_ignore:
+        type: list
+        elements: str
+      potree_unattended_reboot:
+        type: bool
+      potree_unattended_reboot_time:
+        type: str
+      potree_journald_max_use:
+        type: str

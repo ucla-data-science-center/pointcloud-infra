@@ -1,0 +1,39 @@
+---
+# Potree release. Upstream changes rarely; to upgrade, bump the version and
+# checksum, run `pixi run test`, then deploy. See docs/runbook.md.
+potree_version: "1.8.2"
+potree_release_url: "https://github.com/potree/potree/releases/download/{{ potree_version }}/Potree_{{ potree_version }}.zip"
+potree_release_checksum: "sha256:c140a8bce0ce129de762fbc0fd3ba7c21120ffd36d423dd2755abb39f32aebe5"
+
+# Releases unpack under potree_install_root/Potree_<version>; the web root
+# links build/ and libs/ to the active release, so rollback is a version bump.
+potree_install_root: /opt/potree
+potree_web_root: /var/www/pointcloud
+
+# Directory of collection folders to publish. Empty string skips content.
+potree_content_src: ""
+
+potree_server_name: localhost
+potree_server_aliases: []
+
+# letsencrypt: real certs via certbot (production)
+# selfsigned:  Ubuntu snakeoil cert (local staging, tests)
+potree_tls_mode: selfsigned
+potree_letsencrypt_email: ""
+potree_letsencrypt_webroot: /var/lib/letsencrypt/webroot
+
+# HSTS turns any future cert failure into a hard browser error, so it is off
+# until the cert watch (GitHub Action) has been running cleanly for a while.
+potree_hsts_max_age: 0
+
+# Paths hidden from the directory listing (still reachable by URL).
+potree_autoindex_ignore:
+  - branding
+  - build
+  - libs
+
+# Unattended security upgrades, with reboots in a quiet window (UTC).
+potree_unattended_reboot: true
+potree_unattended_reboot_time: "10:30"
+
+potree_journald_max_use: 200M

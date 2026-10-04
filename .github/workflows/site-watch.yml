@@ -1,0 +1,21 @@
+---
+# Daily outside-in check of the live site. A failed run emails repo watchers.
+# Note: GitHub disables scheduled workflows after 60 days with no repo
+# activity; re-enable from the Actions tab if that happens.
+name: Site watch
+
+"on":
+  schedule:
+    - cron: "17 15 * * *" # daily, 8:17am Pacific (PDT)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check HTTP status and certificate expiry
+        run: bash scripts/site-check.sh 21

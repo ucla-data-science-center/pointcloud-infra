@@ -1,0 +1,21 @@
+---
+- name: Install packages
+  ansible.builtin.import_tasks: packages.yml
+
+- name: Install Potree release
+  ansible.builtin.import_tasks: potree.yml
+
+- name: Publish collections and branding
+  ansible.builtin.import_tasks: content.yml
+
+- name: Configure Apache
+  ansible.builtin.import_tasks: apache.yml
+
+- name: Obtain Let's Encrypt certificate
+  ansible.builtin.include_tasks: letsencrypt.yml
+  when:
+    - potree_tls_mode == 'letsencrypt'
+    - not _potree_le_cert.stat.exists
+
+- name: Configure host maintenance
+  ansible.builtin.import_tasks: maintenance.yml

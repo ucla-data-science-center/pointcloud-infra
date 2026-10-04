@@ -1,0 +1,61 @@
+# {{ ansible_managed }}
+# Source: pointcloud-infra/ansible/roles/potree/templates/pointcloud.conf.j2
+
+<VirtualHost *:80>
+    ServerName {{ potree_server_name }}
+{% for alias in potree_server_aliases %}
+    ServerAlias {{ alias }}
+{% endfor %}
+
+    # Let's Encrypt HTTP-01 challenges are answered here; everything else
+    # redirects to HTTPS on the canonical name.
+    Alias /.well-known/acme-challenge/ {{ potree_letsencrypt_webroot }}/.well-known/acme-challenge/
+    <Directory {{ potree_letsencrypt_webroot }}/.well-known/acme-challenge>
+        Require all granted
+    </Directory>
+
+    RewriteEngine on
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://{{ potree_server_name }}%{REQUEST_URI} [R=301,L]
+
+    ErrorLog ${APACHE_LOG_DIR}/pointcloud-error.log
+    CustomLog ${APACHE_LOG_DIR}/pointcloud-access.log combined
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName {{ potree_server_name }}
+{% for alias in potree_server_aliases %}
+    ServerAlias {{ alias }}
+{% endfor %}
+
+    DocumentRoot {{ potree_web_root }}
+
+    SSLEngine on
+    SSLCertificateFile {{ _potree_tls_cert }}
+    SSLCertificateKeyFile {{ _potree_tls_key }}
+{% if _potree_tls_cert.startswith('/etc/letsencrypt/') %}
+    Include /etc/letsencrypt/options-ssl-apache.conf
+{% endif %}
+{% if potree_hsts_max_age | int > 0 %}
+    Header always set Strict-Transport-Security "max-age={{ potree_hsts_max_age }}"
+{% endif %}
+
+    <Directory {{ potree_web_root }}>
+        Options Indexes FollowSymLinks
+        AllowOverride None
+        Require all granted
+
+        # UCLA Library skin for the mod_autoindex listing.
+        # IndexStyleSheet (not a <link> in IndexHeadInsert) is what makes
+        # Apache emit table#indexlist and the row classes the CSS targets.
+        IndexOptions FancyIndexing HTMLTable SuppressDescription SuppressRules NameWidth=* Charset=UTF-8 IconsAreLinks FoldersFirst IgnoreCase
+        IndexStyleSheet /branding/ucla-index.css
+        IndexHeadInsert "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+        HeaderName /branding/header.html
+        ReadmeName /branding/footer.html
+        IndexIgnore {{ potree_autoindex_ignore | join(' ') }}
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/pointcloud-error.log
+    CustomLog ${APACHE_LOG_DIR}/pointcloud-access.log combined
+</VirtualHost>

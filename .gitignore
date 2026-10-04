@@ -1,0 +1,21 @@
+# pixi
+.pixi/
+
+# Ansible
+ansible/collections/ansible_collections/
+*.retry
+ansible-output.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+terraform.tfvars
+.terraform.tfstate.lock.info
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/

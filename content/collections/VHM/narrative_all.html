@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="description" content="">
+	<meta name="author" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>RMCI | VHM Refugee Boat </title>
+
+	<link rel="stylesheet" type="text/css" href="../build/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="../libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="../libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="../libs/jstree/themes/mixed/style.css">
+	<link rel="stylesheet" type="text/css" href="resources/narrative.css">
+
+</head>
+
+<body>
+	<script src="../libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="../libs/spectrum/spectrum.js"></script>
+	<script src="../libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="../libs/three.js/build/three.min.js"></script>
+	<script src="../libs/three.js/extra/lines.js"></script>
+	<script src="../libs/other/BinaryHeap.js"></script>
+	<script src="../libs/tween/tween.min.js"></script>
+	<script src="../libs/d3/d3.js"></script>
+	<script src="../libs/proj4/proj4.js"></script>
+	<script src="../libs/openlayers3/ol.js"></script>
+	<script src="../libs/i18next/i18next.js"></script>
+	<script src="../libs/jstree/jstree.js"></script>
+	<script src="../build/potree/potree.js"></script>
+	<script src="../libs/plasio/js/laslaz.js"></script>
+
+	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
+		<div id="potree_description" class="potree_info_text" style="z-index: 100px;">
+			<a href="https://dal.ucla.edu/rmci/">Refugee Material Culture Initiative</a> <br> Refugee Boat | <a href="https://vietnamesemuseum.org/"> Vietnamese
+				Heritage Museum </a><br> <i>7 Day Narrative</i> <br>
+		</div>
+		<div id="potree_render_area">
+
+			<div id="tb_box">
+				<div id="toolbarbtn">Show Toolbar</div>
+
+				<div id="potree_toolbar">
+					<span>
+						<div class="potree_toolbar_label">
+							Attribute
+						</div>
+						<div>
+							<img name="action_elevation" src="../resources/icons/profile.svg"
+								class="annotation-action-icon" style="width: 2em; height: auto;" />
+							<img name="action_rgb" src="../resources/icons/rgb.svg" class="annotation-action-icon"
+								style="width: 2em; height: auto;" />
+						</div>
+					</span>
+					<span class="potree_toolbar_separator"></span>
+					<span>
+						<div class="potree_toolbar_label">
+							Measure
+						</div>
+						<div>
+							<img name="action_measure_point" src="../resources/icons/point.svg"
+								class="annotation-action-icon" style="width: 2em; height: auto;" />
+							<img name="action_measure_distance" src="../resources/icons/distance.svg"
+								class="annotation-action-icon" style="width: 2em; height: auto;" />
+							<img name="action_measure_circle" src="../resources/icons/circle.svg"
+								class="annotation-action-icon" style="width: 2em; height: auto;" />
+						</div>
+					</span>
+					<span class="potree_toolbar_separator"></span>
+					<span>
+						<div class="potree_toolbar_label" style="width: 12em">
+							Material
+						</div>
+						<div>
+							<select id="optMaterial" name="optMaterial"></select>
+						</div>
+					</span>
+					<span class="potree_toolbar_separator"></span>
+					<span>
+						<div class="potree_toolbar_label">
+							<span data-i18n="appearance.nb_max_pts">Point Budget</span>:
+							<span name="lblPointBudget" style="display: inline-block; width: 4em;"></span>
+						</div>
+						<div>
+							<div id="sldPointBudget"></div>
+						</div>
+					</span>
+				</div>
+			</div>
+
+
+			<div id="portrait">
+				<div id="p_expand">
+					<div id="p_imgdiv"><img src="resources/survivors.jpg" id="p_img"></div>
+					<div id="p_title">
+						<b><i>
+								<spans>The survivors
+									<span id="p_arrow">▼</span><br></span>
+							</i> </b>
+					</div>
+				</div>
+				<div id="p_text">
+					Mr. Phùng Văn Tài, 1961<br>
+					Mr. Phạm Đức Nguyên, 1962<br>
+					Mr. Trần Đình Hoàng, 1968<br>
+					Mr. Nguyễn Văn Đình, 1962<br>
+					Mr. Nguyễn Anh Dũng, 1963<br>
+					Mrs. Nguyễn Thị Mỹ Phương, 1965<br>
+					Mrs. Nguyễn Thị Mỹ Hạnh, 1965<br>
+					Mrs. Phạm Thị Thanh Hằng, 1965<br>
+					Mr. Nguyễn Xuân Phát, 1972<br>
+				</div>
+			</div>
+
+			<div id="intro">
+				<div id="i_expand">
+					<div id="i_title">
+						<b><i><span> Intro
+									<span id="i_arrow">▼</span><br></span></i> </b>
+					</div>
+				</div>
+				<div id="i_text">
+					A six-meter, engineless river sampan powered by two oars and a sail. Eight adults and one child
+					departed
+					from Vung Tau, Vietnam on September 3rd, 1984 in this boat. They sailed the open seas and survived
+					treacherous conditions for seven days as ships passed them. On September 10th, 1984, the passengers,
+					along with the boat, were finally taken aboard the Cetra Corona of Le Havre, a French bulk carrier.
+					The
+					refugees disembarked at Nagoya Seaport in Japan, while the boat was taken to France. The boat
+					remained
+					in the Musée Maritime et Portuaire in Le Havre for 38 years until it moved to the Vietnamese
+					Heritage
+					Museum in February 2023.
+				</div>
+			</div>
+
+			<div id="d7">
+				<fig><img id="d7_img" src="cetracorona.png"></fig>
+				<!-- <div id="d7_cap">
+					<figcaption>The Cetra Corona</figcaption>
+				</div> -->
+			</div>
+
+
+
+			<div id="timeline">
+				<div class="description" id="description"></div>
+
+				<div class="timeline-line"></div>
+
+				<div class="timeline-item" data-day="1"
+					data-description="September 4, 1984 | Their first day was marked by a crash course on steering the sampan in rough waters using its sails, optimizing the wind, and navigating with the sampan’s oars when the air was still. On the high seas, they spotted an oil rig. The realization that there were people who would pass them by, knowing that their fate was to be discovered or die, filled the Captain and crew with morose depression. To make matters worse, their consumption of dried foods amplified their thirst for water, which had to be rationed. Sharing measured sips of water, they gazed out to the endless sea, anxious about the seas’ unpredictable storms and what it may do to their sampan, which floated like a leaf in the middle of a turbulent ocean.">
+					<div class="circle"></div>
+					<div class="label">Day 1</div>
+				</div>
+				<div class="timeline-item" data-day="2"
+					data-description="September 5, 1984 | After sunset, a big storm hit the tiny sampan, restless from maneuvering the sampan through choppy waters for most of the night, Captain Nguyên and the escapees were exhausted and sleep-deprived by the second day. The men of the group - Đình, Hoàng, Dũng, and Tài - worked in solidarity to push the oars through the water on a day when the sea offered no wind to help them. They all agreed that, with no knowledge of what lay ahead, their best course of action was to balance sleep and rest with the work of moving the river sampan through salt waters.">
+					<div class="circle"></div>
+					<div class="label">Day 2</div>
+				</div>
+				<div class="timeline-item" data-day="3"
+					data-description="September 6, 1984 | After a restful night, the group awoke renewed and ever hopeful. The women in the group, Phương, Hạnh, and Hằng, cooked a meal to share with everyone. For the first time since their departure, the group’s terror subsided, and they enjoyed the ocean as some members of the group hopped into the water to refresh themselves. Mid-day, members of the group became convinced that they had spotted islands. Try as they might to bridge the distance to the “islands,” they could not for they were merely figments of hope generated from their weary minds. Reality set in as they grappled with horrifying questions: were the disappearing “islands” foreshadows of things to come? Were storms and pirates awaiting them? Their dwindling supply of food and water took center stage. In a moment of desperation and fear, Tài made the suggestion to return to land, but all three of the women on board said with conviction, “Freedom or death, let us go on and not look back!">
+					<div class="circle"></div>
+					<div class="label">Day 3</div>
+				</div>
+				<div class="timeline-item" data-day="4"
+					data-description="September 7, 1984 | The fourth day was torture. The group was almost completely out of water. Dũng was so thirsty and delirious that he drank oil, thinking it was water. His stomach roiled for hours afterward as a result. The farther out to sea they traveled, the more they passed driftwood, each piece a reminder of the devastating fate of other unfortunate Vietnamese Boat People who perished without ever finding the freedom they so desperately sought. Seeing this darkened their moods. As the day wore on, they passed many ships, but none responded to their desperate cries. This lowered their spirits even more. That evening, in an attempt to bring a bit of joy and hope to the crew, Tài sang songs. From his lips came gems such as Lạy Mẹ Là Ngôi Sao Sáng (Hail Mary by the Sea), Con Thuyền Không Bến (A Boat with No Destined Port), and Hương Ca Vô Tận (Never Ending Serenade Song). His melancholic voice soothed the group’s pain and exhaustion.">
+					<div class="circle"></div>
+					<div class="label">Day 4</div>
+				</div>
+				<div class="timeline-item" data-day="5"
+					data-description="September 8, 1984 | On the fifth day, all hope was lost when the group ran out of water. At that point, the only reality they could see was their deaths in the depths of the ocean, their lives disappearing into obscurity. In desperation, they hailed and sailed dangerously close to a large ship, hoping to be rescued. Instead of an answer to their prayers, they were met by a massive metallic wall, cold and terrifying. After nearly crashing into the boat, they learned the hard way that they should never get too close to a ship unless it had responded to them. Their fears were exasperated when a storm enveloped them in the middle of the night. However, the storm brought them another day to live as freshwater fell from the sky. Everyone worked together to save as much drinkable water as possible by spreading out a nylon tarp.">
+					<div class="circle"></div>
+					<div class="label">Day 5</div>
+				</div>
+				<div class="timeline-item" data-day="6"
+					data-description="September 9, 1984 | The water from the storm lasted only a day. By the end of the next day, the group of nine lost all hope just as the last drop of water in their reserves ran out. Tài used a flashlight to send the Morse code for “S.O.S.” to passing ships throughout the night but to no avail. The brutal heartlessness of each passing ship cut them to their cores. After six days and nights in their small boat, the lack of sympathy and response for their plight crushed their spirits.">
+					<div class="circle"></div>
+					<div class="label">Day 6</div>
+				</div>
+				<div class="timeline-item" data-day="7"
+					data-description="September 10, 1984 | The deeper they sailed into the East Sea, the higher the waves rose, tossing them as if the ocean was attempting to launch them into the sky. On the seventh day, the sea hurled the tiny river sampan in all directions. With each tidal wave of water that picked their sampan up, the group braced themselves for a terrifying drop that would drive them to the bottom of the ocean. Relentless, Tài continued to use the flashlight to send distress signals into the darkness as waves rolled and crashed against the sampan. Unbelievably, one ship finally answered their call: the Cetra Corona of Le Havre, a French bulk carrier. Mystified by their luck, the nine passengers sat on the deck of the Cetra Corona, contemplating the full moon of the Mid-Autumn Festival, Tết Trung Thu. On that night, unlike any night before in their lives, the moon shone brighter than ever before.">
+					<div class="circle"></div>
+					<div class="label">Day 7</div>
+				</div>
+			</div>
+		</div>
+		<div id="potree_sidebar_container"> </div>
+
+	</div>
+
+
+	<style>
+	</style>
+
+	<script type="module">
+
+		import * as THREE from "/libs/three.js/build/three.module.js";
+
+		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+		viewer.loadSettingsFromURL();
+		viewer.setEDLEnabled(true);
+		viewer.setFOV(60);
+		viewer.setPointBudget(4 * 1000 * 1000);
+		viewer.setMinNodeSize(0);
+
+		viewer.scene.view.position.set(0, -6, -1);
+		viewer.scene.view.lookAt(-.73, 1.4, -2.7);
+
+
+		viewer.loadGUI(() => {
+			viewer.setLanguage('en');
+			$("#menu_appearance").next().show();
+			//$("#menu_scene").next().show();
+			// viewer.toggleSidebar();
+		});
+
+
+
+		Potree.loadPointCloud("https://potree-test2.s3.us-west-2.amazonaws.com/VHM/boat/metadata.json", "VHM Boat", function (e) {
+
+			viewer.scene.addPointCloud(e.pointcloud);
+
+			// e.pointcloud.position.set(-500, -5000, -1500)
+			// e.pointcloud.rotation.set(Math.PI * 0, Math.PI * 0, Math.PI * .1);
+
+
+			let material = e.pointcloud.material;
+
+			material.pointColorType = Potree.PointColorType.RGBA; // any Potree.PointColorType.XXXX 
+			material.size = 0.66;  // size of dots
+			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;  // view of dots, 
+			material.shape = Potree.PointShape.CIRCLE;  // shape of points
+
+		});
+
+
+		//TIMELINE
+
+		// const d7 = document.getElementById('d7');
+		document.querySelectorAll('.timeline-item').forEach(item => {
+			item.addEventListener('click', function () {
+				const description = document.getElementById('description');
+
+				if (this.classList.contains('active')) {
+					// If the clicked item is already active, remove the active class and hide the description
+					this.classList.remove('active');
+					description.style.display = 'none'; // Hide description
+					// if (item.getAttribute('data-day') === '7') {
+					// 	d7.style.display = 'none';
+					// }
+
+				} else {
+					// Remove the 'active' class from all items
+					document.querySelectorAll('.timeline-item.active').forEach(activeItem => {
+						activeItem.classList.remove('active');
+					});
+
+					// Add the 'active' class to the clicked item
+					this.classList.add('active');
+
+					// Set and show the description
+					description.style.display = 'block'; // Show description
+					description.textContent = this.getAttribute('data-description');
+				}
+				// console.log(item.getAttribute('data-day'));
+				// d7.style.display = 'none';
+
+				// Show the Cetra Corona photo only if day 7 is clicked
+				// if (item.getAttribute('data-day') === '7') {
+				// 	console.log('Showing d7 element');
+				// 	d7.style.display = 'flex';
+				// } else {
+				// 	console.log('Hiding d7 element');
+				// 	d7.style.display = 'none';
+				// }
+			});
+		});
+
+
+
+
+		//TEXTBOXES
+
+
+		const i_expand = document.getElementById('i_expand');
+		const i_text = document.getElementById('i_text');
+		const i_arrow = document.getElementById('i_arrow');
+
+		i_expand.addEventListener("click", function () {
+			if (i_arrow.textContent === '▼') {
+				i_text.style.display = 'block';
+				i_arrow.textContent = '▲';
+			} else {
+				i_text.style.display = 'none';
+				i_arrow.textContent = '▼';
+			}
+		});
+
+
+		const p_expand = document.getElementById('p_expand');
+		const p_text = document.getElementById('p_text');
+		const p_arrow = document.getElementById('p_arrow');
+		p_expand.addEventListener("click", function () {
+			if (p_arrow.textContent === '▼') {
+				p_text.style.display = 'block';
+				p_arrow.textContent = '▲';
+			} else {
+				console.log('test');
+				p_text.style.display = 'none';
+				p_arrow.textContent = '▼';
+			}
+		});
+
+
+
+		//TOOLBAR
+
+		//TOGGLE
+		const tb_btn = document.getElementById('toolbarbtn');
+		const toolbar = document.getElementById('potree_toolbar');
+
+		tb_btn.addEventListener("click", function () {
+			if (toolbar.style.display === 'none') {
+				toolbar.style.display = 'flex'
+				tb_btn.innerHTML = 'Hide Toolbar';
+			}
+			else {
+				toolbar.style.display = 'none';
+				tb_btn.innerHTML = 'Show Toolbar';
+			}
+		});
+
+
+		const elToolbar = $("#potree_toolbar");
+
+		{ // ATTRIBUTE
+			elToolbar.find("img[name=action_elevation]").click(() => {
+				viewer.scene.pointclouds.forEach(pc => pc.material.activeAttributeName = "elevation");
+			});
+
+			elToolbar.find("img[name=action_rgb]").click(() => {
+				viewer.scene.pointclouds.forEach(pc => pc.material.activeAttributeName = "rgba");
+			});
+		}
+
+		{ // GRADIENT
+			const schemes = Object.keys(Potree.Gradients).map(name => ({ name: name, values: Potree.Gradients[name] }));
+			const elGradientSchemes = elToolbar.find("span[name=gradient_schemes]");
+
+			for (const scheme of schemes) {
+				const elButton = $(`
+				<span style=""></span>
+			`);
+
+				const svg = Potree.Utils.createSvgGradient(scheme.values);
+				svg.setAttributeNS(null, "class", `button-icon`);
+				svg.style.height = "2em";
+				svg.style.width = "1.3em";
+
+				elButton.append($(svg));
+
+				elButton.click(() => {
+					for (const pointcloud of viewer.scene.pointclouds) {
+						pointcloud.material.activeAttributeName = "elevation";
+						pointcloud.material.gradient = Potree.Gradients[scheme.name];
+					}
+				});
+
+				elGradientSchemes.append(elButton);
+			}
+		}
+
+		{ // MEASURE
+			elToolbar.find("img[name=action_measure_point]").click(() => {
+				const measurement = viewer.measuringTool.startInsertion({
+					showDistances: false,
+					showAngles: false,
+					showCoordinates: true,
+					showArea: false,
+					closed: true,
+					maxMarkers: 1,
+					name: 'Point'
+				});
+				measurement = measurement / 10;
+			});
+
+			elToolbar.find("img[name=action_measure_distance]").click(() => {
+				const measurement = viewer.measuringTool.startInsertion({
+					showDistances: true,
+					showArea: false,
+					closed: false,
+					name: 'Distance'
+				});
+				measurement = measurement / 10;
+
+			});
+
+			elToolbar.find("img[name=action_measure_circle]").click(() => {
+				const measurement = viewer.measuringTool.startInsertion({
+					showDistances: false,
+					showHeight: false,
+					showArea: false,
+					showCircle: true,
+					showEdges: false,
+					closed: false,
+					maxMarkers: 3,
+					name: 'Circle'
+				});
+			});
+		}
+
+		{ // MATERIAL
+			let options = [
+				"rgba",
+				"elevation",
+				"level of detail",
+				"indices",
+				// "intensity",
+				// "classification",
+				// "source id",
+			];
+
+			let attributeSelection = elToolbar.find('#optMaterial');
+			for (let option of options) {
+				let elOption = $(`<option>${option}</option>`);
+				attributeSelection.append(elOption);
+			}
+
+			const updateMaterialSelection = (event, ui) => {
+				let selectedValue = attributeSelection.selectmenu().val();
+
+				for (const pointcloud of viewer.scene.pointclouds) {
+					pointcloud.material.activeAttributeName = selectedValue;
+				}
+			};
+
+			attributeSelection.selectmenu({ change: updateMaterialSelection });
+		}
+
+
+		{ // POINT BUDGET
+			elToolbar.find('#sldPointBudget').slider({
+				value: viewer.getPointBudget(),
+				min: 100_000,
+				max: 1_000_000,
+				step: 100_000,
+				slide: (event, ui) => { viewer.setPointBudget(ui.value); }
+			});
+
+			const onBudgetChange = () => {
+				let budget = (viewer.getPointBudget() / (1000_000)).toFixed(1) + "M";
+				elToolbar.find('span[name=lblPointBudget]').html(budget);
+			};
+
+			onBudgetChange();
+			viewer.addEventListener("point_budget_changed", onBudgetChange);
+		}
+
+
+	</script>
+
+
+
+</body>
+
+</html>

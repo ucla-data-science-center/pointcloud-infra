@@ -1,0 +1,52 @@
+---
+- name: Verify pointcloud web server
+  hosts: web
+  gather_facts: false
+  vars:
+    base: https://localhost
+  tasks:
+    - name: Apache config is valid
+      ansible.builtin.command: apache2ctl configtest
+      changed_when: false
+
+    - name: Fetch the directory listing
+      ansible.builtin.uri:
+        url: "{{ base }}/"
+        validate_certs: false
+        return_content: true
+      register: listing
+
+    - name: Listing is skinned and shows collections, not Potree internals
+      ansible.builtin.assert:
+        that:
+          - "'<table id=\"indexlist\">' in listing.content"
+          - "'/branding/ucla-index.css' in listing.content"
+          - "'ucla-header' in listing.content"
+          - "'Iceland/' in listing.content"
+          - "'href=\"build/\"' not in listing.content"
+          - "'href=\"libs/\"' not in listing.content"
+          - listing.server == 'Apache'
+          - listing.x_content_type_options == 'nosniff'
+
+    - name: Viewer and branding assets are served
+      ansible.builtin.uri:
+        url: "{{ base }}/{{ item }}"
+        validate_certs: false
+      loop:
+        - build/potree/potree.js
+        - build/potree/potree.css
+        - libs/three.js/build/three.min.js
+        - branding/ucla-library-logo.png
+        - Iceland/
+
+    - name: Plain HTTP redirects to the canonical HTTPS name
+      ansible.builtin.uri:
+        url: http://localhost/Iceland/
+        follow_redirects: none
+        status_code: 301
+      register: redirect
+
+    - name: Redirect target is correct
+      ansible.builtin.assert:
+        that:
+          - redirect.location == 'https://www.pointcloud.ucla.edu/Iceland/'

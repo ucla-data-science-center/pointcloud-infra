@@ -1,0 +1,47 @@
+---
+- name: Publish branding assets
+  ansible.builtin.copy:
+    src: branding/
+    dest: "{{ potree_web_root }}/branding/"
+    owner: root
+    group: root
+    mode: u=rwX,g=rX,o=rX
+
+# Collections ship as one reproducible tarball: one upload, and only when the
+# content actually changed. Extraction is additive, so files removed from the
+# repo are not deleted on the server (see docs/runbook.md).
+- name: Publish collection pages
+  when: potree_content_src | length > 0
+  vars:
+    _potree_local_tar: "{{ lookup('env', 'TMPDIR') | default('/tmp', true) }}/pointcloud-collections.tar"
+  block:
+    - name: Pack collections on the control machine
+      ansible.builtin.command:
+        argv:
+          - "{{ ansible_playbook_python }}"
+          - "{{ role_path }}/files/pack_content.py"
+          - "{{ potree_content_src }}"
+          - "{{ _potree_local_tar }}"
+      delegate_to: localhost
+      become: false
+      run_once: true
+      changed_when: false
+
+    - name: Upload collections archive
+      ansible.builtin.copy:
+        src: "{{ _potree_local_tar }}"
+        dest: /var/cache/potree/collections.tar
+        owner: root
+        group: root
+        mode: "0644"
+      register: _potree_content_upload
+
+    # Deliberately a task, not a handler: if a later task failed, a handler
+    # would be skipped and the next run would see no upload change, so the
+    # new content would never be extracted.
+    - name: Extract collections into the web root  # noqa: no-handler
+      ansible.builtin.unarchive:
+        src: /var/cache/potree/collections.tar
+        dest: "{{ potree_web_root }}"
+        remote_src: true
+      when: _potree_content_upload is changed
