@@ -3,20 +3,22 @@
 # listing at https://www.pointcloud.ucla.edu/. Plain text only (it is
 # HTML-escaped). Keys are paths under content/collections/.
 #
-# Folders: fill these in. Leave blank ("") to show nothing.
+# Folders: drafted 2026-10-04 from each folder's titles, filenames, data paths
+# and page text (no provenance or credit claimed); edit freely.
+# Leave blank ("") to show nothing.
 # Files: seeded 2026-10-04 from each page's own viewer.setDescription()
 # text; edit freely. Pages not listed show no description.
 
 folders:
-  3DAtlas: ""
-  CadaverArm: ""
-  Cambodia: ""
-  CuneiformCollection: ""
-  FacesRevealed: ""
-  Iceland: ""
-  Test: ""
-  VHM: ""
-  VitalMatters: ""
+  3DAtlas: "Small everyday objects scanned in 3D, with reference photos (9 viewers)"
+  CadaverArm: "Cadaver arm dissection, scanned over three days"
+  Cambodia: "Site scans from Cambodia (Sites 1 and 5)"
+  CuneiformCollection: "Cuneiform tablets from the Cotsen, Clark and Dickson collections (163 viewers)"
+  FacesRevealed: "Mummy board and inner lid: 3D scans and orthophotos"
+  Iceland: "Icelandic turf architecture: 2024 field scans, Glaumbaer Museum objects, ITCH symposium"
+  Test: "Test page, not a collection"
+  VHM: "Vietnamese Heritage Museum: refugee artifacts and a refugee boat"
+  VitalMatters: "Cultural objects: bulul figures, tapestries, doors, a vessel and a Japanese ema"
 
 files:
   "Cambodia/site1.html": "Cambodia Site 5"
