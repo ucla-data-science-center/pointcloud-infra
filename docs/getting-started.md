@@ -57,11 +57,13 @@ The first `pixi` command downloads Ansible, Molecule, Terraform and the linters 
 pixi run staging-up
 ```
 
-This builds an Ubuntu container and configures it with the same Ansible playbook production uses. The first run takes a few minutes. When it finishes, open:
+This builds a Rocky Linux container (the same OS as production) and configures it with the same Ansible playbook production uses. The first run takes a few minutes. When it finishes, open:
 
 **<https://localhost:8443/>**
 
-Your browser will warn about the certificate. That's expected (staging uses a self-signed cert), so click through. You should see the UCLA Library directory listing with the collections. Open `Iceland/` and pick a page to load a point cloud.
+Your browser will warn about the certificate. That's expected (staging uses a self-signed cert), so click through. You should see the UCLA Library directory listing with the collections. Open `Iceland/` and pick a page: the Potree viewer and its controls load.
+
+> **The point clouds themselves won't load in staging yet.** The data lives in S3, and the bucket only serves it to pages on `www.pointcloud.ucla.edu` (it checks the browser's Referer header to stop other sites from hotlinking 600+ GB). Staging runs at `localhost`, so S3 refuses. Allowing staging is on the to-do list; until then, everything except the 3D data itself can be worked on locally.
 
 ## 4. Make a change and see it
 

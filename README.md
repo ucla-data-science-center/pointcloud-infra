@@ -12,7 +12,7 @@ If the server disappeared tomorrow, this repo should be enough to bring it back.
  browser ──► pointcloud.ucla.edu (Elastic IP)
                    │
                    ▼
-        EC2 Ubuntu 24.04 + Apache          ◄── terraform/   builds the box
+        EC2 Rocky Linux 10 + Apache httpd  ◄── terraform/   builds the box
         ├── /build, /libs  (Potree 1.8.2)  ◄── ansible/     configures it
         ├── /branding      (UCLA skin)
         └── /<Collection>/*.html           ◄── content/     the pages people visit

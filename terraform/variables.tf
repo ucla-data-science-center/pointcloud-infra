@@ -4,6 +4,12 @@ variable "region" {
   default     = "us-west-2"
 }
 
+variable "rocky_major_version" {
+  description = "Rocky Linux major version (10 is supported until 2035)."
+  type        = number
+  default     = 10
+}
+
 variable "instance_type" {
   description = "EC2 instance type. Graviton (t4g) is cheapest for a static site; the AMI architecture follows it."
   type        = string
@@ -11,7 +17,7 @@ variable "instance_type" {
 }
 
 variable "root_volume_gb" {
-  description = "Root volume size. The legacy 8 GB disk filled up and broke cert renewal in 2026."
+  description = "Root volume size (XFS on Rocky). The legacy 8 GB disk filled up and broke cert renewal in 2026."
   type        = number
   default     = 30
 }
@@ -23,7 +29,7 @@ variable "subnet_id" {
 }
 
 variable "key_name" {
-  description = "Existing EC2 key pair for SSH (Ansible). SSM Session Manager also works as a fallback."
+  description = "Existing EC2 key pair for SSH (Ansible, user rocky). SSM Session Manager works as a fallback once Ansible has installed the agent."
   type        = string
   default     = "potree-test"
 }

@@ -1,5 +1,5 @@
 ---
-# Local staging: Ubuntu 24.04 with systemd in a Podman container, configured
+# Local staging: Rocky Linux 10 with systemd in a Podman container, configured
 # by the same playbook as production. Only TLS differs (self-signed cert).
 scenario:
   test_sequence:
@@ -22,9 +22,9 @@ driver:
 
 platforms:
   - name: pointcloud-staging
-    image: docker.io/geerlingguy/docker-ubuntu2404-ansible:latest
+    image: docker.io/geerlingguy/docker-rockylinux10-ansible:latest
     pre_build_image: true
-    command: /lib/systemd/systemd
+    command: /usr/sbin/init
     systemd: always
     groups:
       - web
@@ -41,8 +41,10 @@ provisioner:
     group_vars:
       web:
         potree_tls_mode: selfsigned
-        # Staging reboots never; the container has no real kernel anyway.
-        potree_unattended_reboot: false
+        # Containers have no firewall, kernel to reboot, or AWS agent.
+        # SELinux is also inactive in containers; production enforces it.
+        potree_manage_firewalld: false
+        potree_auto_reboot: false
   playbooks:
     converge: ../../playbooks/site.yml
 

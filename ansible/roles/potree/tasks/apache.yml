@@ -4,26 +4,40 @@
     path: "/etc/letsencrypt/live/{{ potree_server_name }}/fullchain.pem"
   register: _potree_le_cert
 
-# Until a real cert exists, Apache serves the snakeoil cert so it can start
-# and answer the ACME challenge on port 80.
+# Self-signed cert: used by staging, and by production until certbot has run
+# (Apache needs some cert to start and answer the ACME challenge on port 80).
+- name: Generate self-signed certificate
+  ansible.builtin.command:
+    argv:
+      - openssl
+      - req
+      - -x509
+      - -newkey
+      - rsa:2048
+      - -nodes
+      - -days
+      - "825"
+      - -subj
+      - "/CN={{ potree_server_name }}"
+      - -keyout
+      - "{{ potree_selfsigned_key }}"
+      - -out
+      - "{{ potree_selfsigned_cert }}"
+    creates: "{{ potree_selfsigned_cert }}"
+
+- name: Protect self-signed key
+  ansible.builtin.file:
+    path: "{{ potree_selfsigned_key }}"
+    owner: root
+    group: root
+    mode: "0600"
+
 - name: Choose TLS certificate
   ansible.builtin.set_fact:
-    _potree_tls_cert: "{{ _le | ternary('/etc/letsencrypt/live/' ~ potree_server_name ~ '/fullchain.pem', '/etc/ssl/certs/ssl-cert-snakeoil.pem') }}"
-    _potree_tls_key: "{{ _le | ternary('/etc/letsencrypt/live/' ~ potree_server_name ~ '/privkey.pem', '/etc/ssl/private/ssl-cert-snakeoil.key') }}"
+    _potree_tls_cert: "{{ _le | ternary('/etc/letsencrypt/live/' ~ potree_server_name ~ '/fullchain.pem', potree_selfsigned_cert) }}"
+    _potree_tls_key: "{{ _le | ternary('/etc/letsencrypt/live/' ~ potree_server_name ~ '/privkey.pem', potree_selfsigned_key) }}"
   vars:
     _le: "{{ potree_tls_mode == 'letsencrypt' and _potree_le_cert.stat.exists }}"
-
-- name: Enable Apache modules
-  community.general.apache2_module:
-    name: "{{ item }}"
-    state: present
-  loop:
-    - ssl
-    - rewrite
-    - headers
-    - alias
-    - autoindex
-  notify: Reload apache
 
 - name: Create ACME challenge directory
   ansible.builtin.file:
@@ -33,46 +47,59 @@
     group: root
     mode: "0755"
 
-- name: Install hardening config
-  ansible.builtin.template:
-    src: zz-pointcloud-hardening.conf.j2
-    dest: /etc/apache2/conf-available/zz-pointcloud-hardening.conf
+# Stock welcome.conf turns off directory listings at "/" and shows the Rocky
+# test page instead. Our home page IS the listing, so neutralize it. Keeping
+# the file (rather than deleting it) stops package updates from restoring it.
+- name: Disable the stock welcome page
+  ansible.builtin.copy:
+    dest: /etc/httpd/conf.d/welcome.conf
+    content: |
+      # Disabled by Ansible (pointcloud-infra): the site root is a directory listing.
     owner: root
     group: root
     mode: "0644"
-  notify: Reload apache
+  notify: Reload httpd
 
-- name: Enable hardening config
-  ansible.builtin.file:
-    src: ../conf-available/zz-pointcloud-hardening.conf
-    dest: /etc/apache2/conf-enabled/zz-pointcloud-hardening.conf
-    state: link
-  notify: Reload apache
+- name: Install hardening config
+  ansible.builtin.template:
+    src: zz-pointcloud-hardening.conf.j2
+    dest: /etc/httpd/conf.d/zz-pointcloud-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload httpd
 
 - name: Install site config
   ansible.builtin.template:
     src: pointcloud.conf.j2
-    dest: /etc/apache2/sites-available/pointcloud.conf
+    dest: /etc/httpd/conf.d/pointcloud.conf
     owner: root
     group: root
     mode: "0644"
-  notify: Reload apache
+  notify: Reload httpd
 
-- name: Enable site
-  ansible.builtin.file:
-    src: ../sites-available/pointcloud.conf
-    dest: /etc/apache2/sites-enabled/pointcloud.conf
-    state: link
-  notify: Reload apache
-
-- name: Disable default site
-  ansible.builtin.file:
-    path: /etc/apache2/sites-enabled/000-default.conf
-    state: absent
-  notify: Reload apache
-
-- name: Start Apache
+- name: Start httpd
   ansible.builtin.systemd_service:
-    name: apache2
+    name: httpd
     state: started
     enabled: true
+
+- name: Open web ports in firewalld
+  when: potree_manage_firewalld
+  block:
+    - name: Start firewalld
+      ansible.builtin.systemd_service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Allow HTTP, HTTPS and SSH
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        permanent: true
+        immediate: true
+        state: enabled
+      loop:
+        - http
+        - https
+        - ssh

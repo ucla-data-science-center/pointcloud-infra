@@ -31,6 +31,8 @@ argument_specs:
       potree_server_aliases:
         type: list
         elements: str
+      potree_canonical_redirect:
+        type: bool
       potree_tls_mode:
         type: str
         choices: [letsencrypt, selfsigned]
@@ -43,9 +45,18 @@ argument_specs:
       potree_autoindex_ignore:
         type: list
         elements: str
-      potree_unattended_reboot:
+      potree_selfsigned_cert:
+        type: path
+      potree_selfsigned_key:
+        type: path
+      potree_manage_firewalld:
         type: bool
-      potree_unattended_reboot_time:
+      potree_auto_update_type:
         type: str
+        choices: [security, default]
+      potree_auto_reboot:
+        type: bool
+      potree_install_ssm_agent:
+        type: bool
       potree_journald_max_use:
         type: str

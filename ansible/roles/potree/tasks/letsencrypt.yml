@@ -23,7 +23,14 @@
       - --email
       - "{{ potree_letsencrypt_email }}"
       - --deploy-hook
-      - systemctl reload apache2
+      - systemctl reload httpd
+
+# EPEL's certbot ships the renewal timer disabled.
+- name: Enable automatic renewal
+  ansible.builtin.systemd_service:
+    name: certbot-renew.timer
+    state: started
+    enabled: true
 
 - name: Switch Apache to the new certificate
   ansible.builtin.import_tasks: apache.yml

@@ -22,3 +22,8 @@ output "test_before_cutover" {
   description = "Preview the new server under the real hostname without touching DNS."
   value       = "curl -k --resolve www.pointcloud.ucla.edu:443:${aws_instance.web.public_ip} https://www.pointcloud.ucla.edu/"
 }
+
+output "ami" {
+  description = "Rocky Linux image the instance was built from."
+  value       = "${data.aws_ami.rocky.name} (${data.aws_ami.rocky.id})"
+}

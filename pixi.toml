@@ -29,7 +29,7 @@ setup = { cmd = "ansible-galaxy collection install -r requirements.yml -p collec
 # Lint everything (same checks CI runs)
 lint = "pre-commit run --all-files"
 
-# Local staging: a systemd Ubuntu 24.04 container run by Molecule + Podman
+# Local staging: a systemd Rocky Linux 10 container run by Molecule + Podman
 test = { cmd = "molecule test", cwd = "ansible", description = "Full create/converge/idempotence/verify/destroy cycle" }
 staging-up = { cmd = "molecule converge", cwd = "ansible", description = "Build or update local staging, leave it running" }
 staging-potree-dev = { cmd = "molecule converge -- -e potree_local_build={{ potree_dir }}", args = ["potree_dir"], cwd = "ansible", description = "Serve your local Potree build in staging (after npm run build)" }
