@@ -49,6 +49,10 @@ argument_specs:
         type: path
       potree_hsts_max_age:
         type: int
+      potree_site_title:
+        type: str
+      potree_site_description:
+        type: str
       potree_descriptions:
         type: dict
         description: Listing descriptions; see content/descriptions.yml.

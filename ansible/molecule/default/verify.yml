@@ -66,6 +66,14 @@
           - root_listing.content is search('href="Test/".*?Test page, not a collection', multiline=True)
           - root_listing.content.count('Test page, not a collection') == 1
 
+    - name: Listings have real titles, not "Index of"
+      ansible.builtin.assert:
+        that:
+          - "'<title>Point Cloud Collections | UCLA Library</title>' in root_listing.content"
+          - "'<title>Iceland | Point Cloud Collections | UCLA Library</title>' in iceland.content"
+          - "'Index of' not in root_listing.content"
+          - "'name=\"description\"' in root_listing.content"
+
     - name: Potree assets are cacheable
       ansible.builtin.uri:
         url: "{{ base }}/build/potree/potree.js"
