@@ -1,0 +1,53 @@
+---
+# Renewal must work whether the certificate was issued by this role or
+# copied from the old server before cutover (docs/cutover.md). The old
+# server used certbot's Apache plugin, which isn't installed here, so its
+# renewal config is switched to the webroot method this server answers.
+
+- name: Create renewal hook directory
+  ansible.builtin.file:
+    path: /etc/letsencrypt/renewal-hooks/deploy
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Reload httpd after any renewal
+  ansible.builtin.copy:
+    dest: /etc/letsencrypt/renewal-hooks/deploy/reload-httpd.sh
+    content: |
+      #!/bin/sh
+      # Managed by Ansible (pointcloud-infra)
+      systemctl reload httpd
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Check for this site's renewal config
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/renewal/{{ potree_server_name }}.conf"
+  register: _potree_renewal_conf
+
+- name: Renew with the webroot method
+  community.general.ini_file:
+    path: "/etc/letsencrypt/renewal/{{ potree_server_name }}.conf"
+    section: renewalparams
+    option: "{{ item.option }}"
+    value: "{{ item.value | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - { option: authenticator, value: webroot }
+    - { option: webroot_path, value: "{{ potree_letsencrypt_webroot }}," }
+    - { option: installer, state: absent }
+  loop_control:
+    label: "{{ item.option }}"
+  when: _potree_renewal_conf.stat.exists
+
+- name: Enable the renewal timer
+  ansible.builtin.systemd_service:
+    name: certbot-renew.timer
+    state: started
+    enabled: true

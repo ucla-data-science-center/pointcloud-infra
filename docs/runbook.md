@@ -17,11 +17,21 @@ How to do routine things, and what to do when something breaks. Every command ru
 
 ## Remove a collection
 
-Content publishing is additive, so deleting a folder from the repo does not delete it from the server. After the PR merges and deploys, remove it on the server too:
+Delete the folder from `content/collections/`, PR, deploy. Each deploy publishes exactly what's in git, so the pages disappear from the site.
 
-```bash
-ssh -i ~/.ssh/potree-test.pem rocky@<host> 'sudo rm -rf /var/www/pointcloud/<Name>'
-```
+## Roll back content
+
+Every deploy is a complete, checksum-verified release in `/var/www/pointcloud-releases/collections-<digest>/`, and `/var/www/pointcloud` is a symlink to the active one. The last three are kept.
+
+- Normal way: revert the PR and deploy.
+- Fast way during an incident: point the symlink at the previous release.
+  ```bash
+  ssh ... 'ls -lt /var/www/pointcloud-releases/'
+  ssh ... 'sudo ln -sfn /var/www/pointcloud-releases/collections-<previous> /var/www/pointcloud'
+  ```
+  The next deploy puts it back to whatever git says, so revert in git too.
+
+If files in a release get deleted or edited on the server, the next deploy notices (manifest check) and reinstalls that release.
 
 ## Upgrade Potree
 

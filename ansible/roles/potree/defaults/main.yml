@@ -16,10 +16,16 @@ potree_local_build: ""
 # (httpd_sys_content_t) applies. Paths elsewhere (e.g. /opt) would need
 # custom file contexts.
 potree_install_root: /var/www/potree-releases
-potree_web_root: /var/www/pointcloud
+potree_web_root: /var/www/pointcloud            # a symlink to the active content release
+potree_releases_root: /var/www/pointcloud-releases
+potree_keep_releases: 3                          # content releases kept for rollback
 
-# Directory of collection folders to publish. Empty string skips content.
-potree_content_src: ""
+# potree_content_src (required, no default): local directory of collection
+# folders to publish. Set in playbooks/group_vars/all.yml.
+
+# Fail unless SELinux is enabled and enforcing, then fix labels on served
+# paths. Off only in containers, where SELinux isn't available.
+potree_require_selinux: true
 
 potree_server_name: localhost
 potree_server_aliases: []
@@ -44,6 +50,7 @@ potree_autoindex_ignore:
   - branding
   - build
   - libs
+  - MANIFEST.sha256
 
 # Host firewall (firewalld). The AWS security group already filters traffic;
 # this is defense in depth. Off in containers, where firewalld can't run.

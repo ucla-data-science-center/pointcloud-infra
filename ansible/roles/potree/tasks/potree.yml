@@ -9,18 +9,20 @@
   loop:
     - "{{ potree_install_root }}"
     - /var/cache/potree
-    - "{{ potree_web_root }}"
 
-- name: Choose Potree source
-  ansible.builtin.set_fact:
-    _potree_active_dir: >-
-      {{ potree_install_root }}/{{ (potree_local_build | length > 0)
-         | ternary('Potree_local', 'Potree_' ~ potree_version) }}
-
-# Default: the pinned upstream release.
+# Default: the pinned upstream release. Unpacked to a temporary directory and
+# moved into place only when complete, so a failed unzip never looks installed.
 - name: Install Potree release
   when: potree_local_build | length == 0
+  vars:
+    _final: "{{ potree_install_root }}/Potree_{{ potree_version }}"
+    _partial: "{{ potree_install_root }}/.partial-{{ potree_version }}"
   block:
+    - name: Check for installed release
+      ansible.builtin.stat:
+        path: "{{ _final }}/build/potree/potree.js"
+      register: _potree_installed
+
     - name: Download Potree release
       ansible.builtin.get_url:
         url: "{{ potree_release_url }}"
@@ -30,12 +32,41 @@
         group: root
         mode: "0644"
 
-    - name: Unpack Potree release
-      ansible.builtin.unarchive:
-        src: "/var/cache/potree/Potree_{{ potree_version }}.zip"
-        dest: "{{ potree_install_root }}"
-        remote_src: true
-        creates: "{{ potree_install_root }}/Potree_{{ potree_version }}/build/potree/potree.js"
+    - name: Unpack and activate release
+      when: not _potree_installed.stat.exists
+      block:
+        - name: Clear any partial unpack
+          ansible.builtin.file:
+            path: "{{ _partial }}"
+            state: absent
+
+        - name: Create partial directory
+          ansible.builtin.file:
+            path: "{{ _partial }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+
+        - name: Unpack Potree release
+          ansible.builtin.unarchive:
+            src: "/var/cache/potree/Potree_{{ potree_version }}.zip"
+            dest: "{{ _partial }}"
+            remote_src: true
+
+        - name: Move release into place
+          ansible.builtin.command:
+            argv: [mv, "{{ _partial }}/Potree_{{ potree_version }}", "{{ _final }}"]
+            creates: "{{ _final }}"
+
+        - name: Remove partial directory
+          ansible.builtin.file:
+            path: "{{ _partial }}"
+            state: absent
+
+    - name: Use the release
+      ansible.builtin.set_fact:
+        _potree_active_dir: "{{ _final }}"
 
 # Development: a Potree checkout on your machine (after `npm run build`).
 # Staging only; see docs/hacking-on-potree.md.
@@ -44,17 +75,17 @@
   vars:
     _potree_local_tar: "{{ lookup('env', 'TMPDIR') | default('/tmp', true) }}/pointcloud-potree-local.tar"
   block:
+    - name: Refuse local builds outside staging
+      ansible.builtin.assert:
+        that: potree_tls_mode != 'letsencrypt'
+        fail_msg: Local Potree builds are for staging only, never production.
+
     - name: Check the local build exists
       ansible.builtin.stat:
         path: "{{ potree_local_build }}/build/potree/potree.js"
       delegate_to: localhost
       become: false
       register: _potree_local_js
-
-    - name: Refuse local builds outside staging
-      ansible.builtin.assert:
-        that: potree_tls_mode != 'letsencrypt'
-        fail_msg: Local Potree builds are for staging only, never production.
 
     - name: Fail if the local build is missing
       ansible.builtin.assert:
@@ -68,6 +99,7 @@
         argv:
           - "{{ ansible_playbook_python }}"
           - "{{ role_path }}/files/pack_content.py"
+          - --file-times
           - "{{ potree_local_build }}"
           - "{{ _potree_local_tar }}"
           - build
@@ -77,38 +109,13 @@
       run_once: true
       changed_when: false
 
-    - name: Upload local build
-      ansible.builtin.copy:
-        src: "{{ _potree_local_tar }}"
-        dest: /var/cache/potree/potree-local.tar
-        owner: root
-        group: root
-        mode: "0644"
-      register: _potree_local_upload
+    - name: Install local build as a verified release
+      ansible.builtin.include_tasks: release.yml
+      vars:
+        _potree_rel_tar: "{{ _potree_local_tar }}"
+        _potree_rel_name: potree-local
+        _potree_rel_root: "{{ potree_install_root }}"
 
-    - name: Create local build directory
-      ansible.builtin.file:
-        path: "{{ potree_install_root }}/Potree_local"
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
-
-    # A task, not a handler, for the same reason as collection content.
-    - name: Extract local build  # noqa: no-handler
-      ansible.builtin.unarchive:
-        src: /var/cache/potree/potree-local.tar
-        dest: "{{ potree_install_root }}/Potree_local"
-        remote_src: true
-      when: _potree_local_upload is changed
-
-# Collection pages load ../build and ../libs, so both live at the web root.
-- name: Link active Potree into the web root
-  ansible.builtin.file:
-    src: "{{ _potree_active_dir }}/{{ item }}"
-    dest: "{{ potree_web_root }}/{{ item }}"
-    state: link
-    force: true
-  loop:
-    - build
-    - libs
+    - name: Use the local build
+      ansible.builtin.set_fact:
+        _potree_active_dir: "{{ _potree_rel_dir }}"

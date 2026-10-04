@@ -24,7 +24,14 @@ argument_specs:
         type: path
       potree_content_src:
         type: str
-        description: Local directory of collection folders; empty to skip.
+        required: true
+        description: Local directory of collection folders to publish.
+      potree_releases_root:
+        type: path
+      potree_keep_releases:
+        type: int
+      potree_require_selinux:
+        type: bool
       potree_server_name:
         type: str
         required: true

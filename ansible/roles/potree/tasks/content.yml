@@ -1,47 +1,110 @@
 ---
+# Site layout (all under /var/www so SELinux default labels apply):
+#
+#   /var/www/pointcloud            -> symlink to the active content release
+#   /var/www/pointcloud-releases/collections-<digest>/
+#       <Collection>/...           collection pages (exactly what's in git)
+#       build, libs                -> active Potree release
+#       branding                   -> /var/www/pointcloud-branding
+#   /var/www/pointcloud-branding/  UCLA Library skin
+#
+# Each deploy is a complete release, verified against its manifest and
+# switched in with one symlink change. Pages removed from git disappear;
+# the previous releases stay on disk for rollback.
+
 - name: Publish branding assets
   ansible.builtin.copy:
     src: branding/
-    dest: "{{ potree_web_root }}/branding/"
+    dest: /var/www/pointcloud-branding/
     owner: root
     group: root
     mode: u=rwX,g=rX,o=rX
 
-# Collections ship as one reproducible tarball: one upload, and only when the
-# content actually changed. Extraction is additive, so files removed from the
-# repo are not deleted on the server (see docs/runbook.md).
-- name: Publish collection pages
-  when: potree_content_src | length > 0
+- name: Pack collections on the control machine
+  ansible.builtin.command:
+    argv:
+      - "{{ ansible_playbook_python }}"
+      - "{{ role_path }}/files/pack_content.py"
+      - "{{ potree_content_src }}"
+      - "{{ _potree_content_tar }}"
+  delegate_to: localhost
+  become: false
+  run_once: true
+  changed_when: false
   vars:
-    _potree_local_tar: "{{ lookup('env', 'TMPDIR') | default('/tmp', true) }}/pointcloud-collections.tar"
-  block:
-    - name: Pack collections on the control machine
-      ansible.builtin.command:
-        argv:
-          - "{{ ansible_playbook_python }}"
-          - "{{ role_path }}/files/pack_content.py"
-          - "{{ potree_content_src }}"
-          - "{{ _potree_local_tar }}"
-      delegate_to: localhost
-      become: false
-      run_once: true
-      changed_when: false
+    _potree_content_tar: "{{ lookup('env', 'TMPDIR') | default('/tmp', true) }}/pointcloud-collections.tar"
 
-    - name: Upload collections archive
-      ansible.builtin.copy:
-        src: "{{ _potree_local_tar }}"
-        dest: /var/cache/potree/collections.tar
-        owner: root
-        group: root
-        mode: "0644"
-      register: _potree_content_upload
+- name: Install collections as a verified release
+  ansible.builtin.include_tasks: release.yml
+  vars:
+    _potree_rel_tar: "{{ lookup('env', 'TMPDIR') | default('/tmp', true) }}/pointcloud-collections.tar"
+    _potree_rel_name: collections
+    _potree_rel_root: "{{ potree_releases_root }}"
 
-    # Deliberately a task, not a handler: if a later task failed, a handler
-    # would be skipped and the next run would see no upload change, so the
-    # new content would never be extracted.
-    - name: Extract collections into the web root  # noqa: no-handler
-      ansible.builtin.unarchive:
-        src: /var/cache/potree/collections.tar
-        dest: "{{ potree_web_root }}"
-        remote_src: true
-      when: _potree_content_upload is changed
+- name: Link Potree and branding into the release
+  ansible.builtin.file:
+    src: "{{ item.src }}"
+    dest: "{{ _potree_rel_dir }}/{{ item.name }}"
+    state: link
+    force: true
+  loop:
+    - { name: build, src: "{{ _potree_active_dir }}/build" }
+    - { name: libs, src: "{{ _potree_active_dir }}/libs" }
+    - { name: branding, src: /var/www/pointcloud-branding }
+  loop_control:
+    label: "{{ item.name }}"
+
+# One-time migration for hosts built before releases existed.
+- name: Check the web root
+  ansible.builtin.stat:
+    path: "{{ potree_web_root }}"
+  register: _potree_web_root
+
+- name: Move an old-style web root directory aside
+  ansible.builtin.command:
+    argv: [mv, "{{ potree_web_root }}", "{{ potree_web_root }}.pre-releases"]
+    creates: "{{ potree_web_root }}.pre-releases"
+  when:
+    - _potree_web_root.stat.exists
+    - _potree_web_root.stat.isdir
+    - not _potree_web_root.stat.islnk
+
+- name: Activate the release
+  ansible.builtin.file:
+    src: "{{ _potree_rel_dir }}"
+    dest: "{{ potree_web_root }}"
+    state: link
+    force: true
+
+- name: Find old releases
+  ansible.builtin.find:
+    paths: "{{ potree_releases_root }}"
+    patterns: "collections-*"
+    file_type: directory
+  register: _potree_old_releases
+
+- name: Prune releases beyond the newest kept ones
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: >-
+    {{ (_potree_old_releases.files | sort(attribute='mtime', reverse=true))[potree_keep_releases:]
+       | rejectattr('path', 'equalto', _potree_rel_dir) | list }}
+  loop_control:
+    label: "{{ item.path | basename }}"
+
+- name: Find cached archives
+  ansible.builtin.find:
+    paths: /var/cache/potree
+    patterns: "collections-*.tar"
+  register: _potree_old_tars
+
+- name: Prune cached archives beyond the newest kept ones
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: >-
+    {{ (_potree_old_tars.files | sort(attribute='mtime', reverse=true))[potree_keep_releases:]
+       | rejectattr('path', 'equalto', _potree_rel_cache) | list }}
+  loop_control:
+    label: "{{ item.path | basename }}"

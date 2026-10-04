@@ -1,0 +1,24 @@
+---
+# Served files live under /var/www so the default policy labels them
+# httpd_sys_content_t. That's an assumption until checked, so check it.
+
+# Facts gathered at play start may predate python3-libselinux being installed.
+- name: Refresh SELinux facts
+  ansible.builtin.setup:
+    filter: ansible_selinux
+
+- name: Require SELinux enforcing
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.selinux.status == 'enabled'
+      - ansible_facts.selinux.mode == 'enforcing'
+    fail_msg: >-
+      SELinux must be enabled and enforcing (found status={{ ansible_facts.selinux.status }},
+      mode={{ ansible_facts.selinux.mode | default('n/a') }}). Don't disable it to make
+      something work; fix the file context instead (docs/runbook.md#selinux).
+
+- name: Restore default SELinux labels on served and ACME paths
+  ansible.builtin.command:
+    argv: [restorecon, -R, -v, /var/www]
+  register: _potree_restorecon
+  changed_when: _potree_restorecon.stdout | length > 0

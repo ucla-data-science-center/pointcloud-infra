@@ -10,18 +10,23 @@ The public IP is an Elastic IP (`44.225.161.146`), so cutover and rollback are b
       `rsync -avn -e "ssh -i ~/.ssh/potree-test.pem" ubuntu@pointcloud.ucla.edu:/home/ubuntu/potree/<Name>/ content/collections/<Name>/` (drop `-n` to copy)
 - [ ] `pixi run test` passes.
 - [ ] `terraform/terraform.tfvars` exists with your `admin_ssh_cidrs` and `eip_target = "legacy"`.
-- [ ] Pick a quiet time. Expect a minute or two of certificate warnings (see step 5).
+- [ ] Pick a quiet time. There should be no certificate warnings: the real certificate is copied over before the IP moves.
 
 ## Steps
 
 1. **Build the new server.** `pixi run tf-init && pixi run tf-plan`. Expect: new instance, security group, IAM role; the Elastic IP imported; an association to the legacy instance (no change in behavior). Then `pixi run tf-apply`.
-2. **Configure it with a self-signed cert first.** `cd ansible && pixi run -- ansible-playbook playbooks/site.yml -e potree_tls_mode=selfsigned`
-3. **Test it under the real hostname, without DNS:**
+2. **Copy the live certificate to the new server** (both names are on the `www.pointcloud.ucla.edu` cert; `-p` keeps certbot's symlinks intact):
+   ```bash
+   NEW=$(pixi run -- terraform -chdir=terraform output -raw instance_public_ip)
+   ssh -i ~/.ssh/potree-test.pem ubuntu@pointcloud.ucla.edu 'sudo tar -czpf - -C /etc letsencrypt' \
+     | ssh -i ~/.ssh/potree-test.pem rocky@$NEW 'sudo tar -xzpf - -C /etc && sudo restorecon -R /etc/letsencrypt'
+   ```
+3. **Configure it.** `pixi run deploy`. The role finds the copied cert, uses it, and switches its renewal config from the old Apache plugin to the webroot method. Then run the [acceptance checklist](acceptance.md) on the new host.
+4. **Test it under the real hostname, without DNS:**
    `pixi run -- terraform -chdir=terraform output -raw test_before_cutover | sh`
    Also point a browser at it: add `<new-ip> www.pointcloud.ucla.edu` to `/etc/hosts`, click through collections, then remove the line.
-4. **Move the IP.** Set `eip_target = "new"` in terraform.tfvars, `pixi run tf-apply`.
-5. **Get the real certificate.** `pixi run deploy`. With the IP now pointing at the new server, certbot completes the HTTP-01 challenge and Apache switches to the Let's Encrypt cert.
-6. **Verify.** `pixi run site-check`, and check a few collections in a browser.
+5. **Move the IP.** Set `eip_target = "new"` in terraform.tfvars, `pixi run tf-apply`.
+6. **Verify.** `pixi run site-check`, check a few collections in a browser, and confirm renewal works now that the IP points here: `ssh rocky@<new> 'sudo certbot renew --dry-run'`.
 
 ## Rollback
 

@@ -1,0 +1,75 @@
+---
+# Install a packed archive as an immutable, verified release directory.
+#
+# Inputs:  _potree_rel_tar  (archive path on the control machine, made by pack_content.py)
+#          _potree_rel_name (prefix, e.g. "collections")
+#          _potree_rel_root (directory that holds releases on the server)
+# Output:  _potree_rel_dir  (the verified release directory)
+#
+# Every run re-verifies the installed files against MANIFEST.sha256, so an
+# interrupted extraction, a deleted file, or a hand edit on the server is
+# repaired on the next run, whether or not the upload changed.
+- name: Checksum the release archive
+  ansible.builtin.stat:
+    path: "{{ _potree_rel_tar }}"
+    checksum_algorithm: sha256
+  delegate_to: localhost
+  become: false
+  register: _potree_rel_stat
+
+- name: Name the release
+  ansible.builtin.set_fact:
+    _potree_rel_dir: "{{ _potree_rel_root }}/{{ _potree_rel_name }}-{{ _potree_rel_stat.stat.checksum[:12] }}"
+    _potree_rel_cache: "/var/cache/potree/{{ _potree_rel_name }}-{{ _potree_rel_stat.stat.checksum[:12] }}.tar"
+
+- name: Create release root
+  ansible.builtin.file:
+    path: "{{ _potree_rel_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Upload release archive
+  ansible.builtin.copy:
+    src: "{{ _potree_rel_tar }}"
+    dest: "{{ _potree_rel_cache }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Verify installed release
+  ansible.builtin.command:
+    cmd: sha256sum --check --quiet --strict MANIFEST.sha256
+    chdir: "{{ _potree_rel_dir }}"
+  register: _potree_rel_verify
+  changed_when: false
+  failed_when: false
+
+- name: Install or repair release
+  when: _potree_rel_verify.rc | default(1) != 0
+  block:
+    - name: Remove incomplete release
+      ansible.builtin.file:
+        path: "{{ _potree_rel_dir }}"
+        state: absent
+
+    - name: Create release directory
+      ansible.builtin.file:
+        path: "{{ _potree_rel_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Extract release
+      ansible.builtin.unarchive:
+        src: "{{ _potree_rel_cache }}"
+        dest: "{{ _potree_rel_dir }}"
+        remote_src: true
+
+    - name: Confirm extracted release matches its manifest
+      ansible.builtin.command:
+        cmd: sha256sum --check --quiet --strict MANIFEST.sha256
+        chdir: "{{ _potree_rel_dir }}"
+      changed_when: false

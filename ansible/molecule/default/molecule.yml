@@ -1,6 +1,9 @@
 ---
 # Local staging: Rocky Linux 10 with systemd in a Podman container, configured
-# by the same playbook as production. Only TLS differs (self-signed cert).
+# by the same playbook as production. Differences from production: self-signed
+# TLS, no firewalld, no SELinux, no SSM agent, no automatic reboots, and S3
+# point cloud data doesn't load (the bucket only serves www.pointcloud.ucla.edu).
+# Those paths are checked on a real host: docs/acceptance.md.
 scenario:
   test_sequence:
     - dependency
@@ -22,7 +25,9 @@ driver:
 
 platforms:
   - name: pointcloud-staging
-    image: docker.io/geerlingguy/docker-rockylinux10-ansible:latest
+    # Pinned by digest (multi-arch index) so staging doesn't change under us.
+    # To update: take the new digest from Docker Hub, then `pixi run test`.
+    image: docker.io/geerlingguy/docker-rockylinux10-ansible@sha256:c4056504bdd5e7c61f18325f3df704a03913d50f50c952298bbc15e81ddbbe8e
     pre_build_image: true
     command: /usr/sbin/init
     systemd: always
@@ -44,6 +49,7 @@ provisioner:
         # Containers have no firewall, kernel to reboot, or AWS agent.
         # SELinux is also inactive in containers; production enforces it.
         potree_manage_firewalld: false
+        potree_require_selinux: false
         potree_auto_reboot: false
   playbooks:
     converge: ../../playbooks/site.yml
