@@ -1,17 +1,46 @@
 ---
 - name: Install web server packages
-  ansible.builtin.apt:
+  ansible.builtin.dnf:
     name:
-      - apache2
-      - ssl-cert
+      - httpd
+      - mod_ssl
+      - openssl
       - unzip
-      - unattended-upgrades
+      - tar
+      - dnf-automatic
+      - python3-libselinux   # lets Ansible manage files correctly with SELinux enforcing
     state: present
-    update_cache: true
-    cache_valid_time: 3600
+
+# certbot is not in the Rocky base repos; it comes from EPEL.
+- name: Enable EPEL
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+  when: potree_tls_mode == 'letsencrypt'
 
 - name: Install certbot
-  ansible.builtin.apt:
+  ansible.builtin.dnf:
     name: certbot
     state: present
   when: potree_tls_mode == 'letsencrypt'
+
+- name: Install firewalld
+  ansible.builtin.dnf:
+    name: firewalld
+    state: present
+  when: potree_manage_firewalld
+
+- name: Install SSM agent
+  ansible.builtin.dnf:
+    name: "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/{{ _arch }}/amazon-ssm-agent.rpm"
+    state: present
+  vars:
+    _arch: "{{ (ansible_facts['architecture'] == 'aarch64') | ternary('linux_arm64', 'linux_amd64') }}"
+  when: potree_install_ssm_agent
+
+- name: Start SSM agent
+  ansible.builtin.systemd_service:
+    name: amazon-ssm-agent
+    state: started
+    enabled: true
+  when: potree_install_ssm_agent

@@ -6,7 +6,7 @@
     base: https://localhost
   tasks:
     - name: Apache config is valid
-      ansible.builtin.command: apache2ctl configtest
+      ansible.builtin.command: apachectl configtest
       changed_when: false
 
     - name: Fetch the directory listing
@@ -27,6 +27,17 @@
           - "'href=\"libs/\"' not in listing.content"
           - listing.server == 'Apache'
           - listing.x_content_type_options == 'nosniff'
+
+    - name: Read automatic update timer status
+      ansible.builtin.systemd_service:
+        name: dnf-automatic.timer
+      register: dnf_timer
+
+    - name: Automatic updates are enabled and scheduled
+      ansible.builtin.assert:
+        that:
+          - dnf_timer.status.UnitFileState == 'enabled'
+          - dnf_timer.status.ActiveState == 'active'
 
     - name: Viewer and branding assets are served
       ansible.builtin.uri:

@@ -1,24 +1,25 @@
 ---
-- name: Enable unattended upgrades
-  ansible.builtin.copy:
-    dest: /etc/apt/apt.conf.d/20auto-upgrades
-    content: |
-      APT::Periodic::Update-Package-Lists "1";
-      APT::Periodic::Unattended-Upgrade "1";
+- name: Configure automatic updates
+  community.general.ini_file:
+    path: /etc/dnf/automatic.conf
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
     owner: root
     group: root
     mode: "0644"
+  loop:
+    - { section: commands, option: upgrade_type, value: "{{ potree_auto_update_type }}" }
+    - { section: commands, option: apply_updates, value: "yes" }
+    - { section: commands, option: reboot, value: "{{ potree_auto_reboot | ternary('when-needed', 'never') }}" }
+  loop_control:
+    label: "{{ item.option }}={{ item.value }}"
 
-- name: Configure unattended reboots
-  ansible.builtin.copy:
-    dest: /etc/apt/apt.conf.d/52pointcloud-unattended
-    content: |
-      // Managed by Ansible (pointcloud-infra)
-      Unattended-Upgrade::Automatic-Reboot "{{ potree_unattended_reboot | ternary('true', 'false') }}";
-      Unattended-Upgrade::Automatic-Reboot-Time "{{ potree_unattended_reboot_time }}";
-    owner: root
-    group: root
-    mode: "0644"
+- name: Enable automatic update timer
+  ansible.builtin.systemd_service:
+    name: dnf-automatic.timer
+    state: started
+    enabled: true
 
 # A full root disk is what silently broke cert renewal in August 2026.
 - name: Create journald drop-in directory

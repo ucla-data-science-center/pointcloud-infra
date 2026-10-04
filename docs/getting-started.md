@@ -57,7 +57,7 @@ The first `pixi` command downloads Ansible, Molecule, Terraform and the linters 
 pixi run staging-up
 ```
 
-This builds an Ubuntu container and configures it with the same Ansible playbook production uses. The first run takes a few minutes. When it finishes, open:
+This builds a Rocky Linux container (the same OS as production) and configures it with the same Ansible playbook production uses. The first run takes a few minutes. When it finishes, open:
 
 **<https://localhost:8443/>**
 

@@ -1,18 +1,30 @@
 # -----------------------------------------------------------------------------
-# Image: latest Canonical Ubuntu 24.04 for the instance type's architecture.
-# Instances ignore AMI drift so a new Canonical release never forces a rebuild;
-# patching is unattended-upgrades' job (see the Ansible role).
+# Image: latest official Rocky Linux AMI (published by the Rocky Enterprise
+# Software Foundation's AWS account) for the instance type's architecture.
+# Instances ignore AMI drift so a new point release never forces a rebuild;
+# patching is dnf-automatic's job (see the Ansible role).
 # -----------------------------------------------------------------------------
 data "aws_ec2_instance_type" "web" {
   instance_type = var.instance_type
 }
 
 locals {
-  arch = contains(data.aws_ec2_instance_type.web.supported_architectures, "arm64") ? "arm64" : "amd64"
+  rocky_arch = contains(data.aws_ec2_instance_type.web.supported_architectures, "arm64") ? "aarch64" : "x86_64"
 }
 
-data "aws_ssm_parameter" "ubuntu_ami" {
-  name = "/aws/service/canonical/ubuntu/server/24.04/stable/current/${local.arch}/hvm/ebs-gp3/ami-id"
+data "aws_ami" "rocky" {
+  owners      = ["792107900819"] # Rocky Enterprise Software Foundation
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["Rocky-${var.rocky_major_version}-EC2-Base-${var.rocky_major_version}.*.${local.rocky_arch}"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [local.rocky_arch == "aarch64" ? "arm64" : "x86_64"]
+  }
 }
 
 data "aws_subnet" "web" {
@@ -97,7 +109,7 @@ resource "aws_iam_instance_profile" "web" {
 # The web server. Configuration is Ansible's job; Terraform only builds the box.
 # -----------------------------------------------------------------------------
 resource "aws_instance" "web" {
-  ami                    = data.aws_ssm_parameter.ubuntu_ami.insecure_value # public value; keeps the AMI ID readable in plans
+  ami                    = data.aws_ami.rocky.id
   instance_type          = var.instance_type
   subnet_id              = var.subnet_id
   key_name               = var.key_name
