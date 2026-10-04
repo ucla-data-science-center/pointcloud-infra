@@ -39,6 +39,16 @@
           - dnf_timer.status.UnitFileState == 'enabled'
           - dnf_timer.status.ActiveState == 'active'
 
+    - name: Potree assets are cacheable
+      ansible.builtin.uri:
+        url: "{{ base }}/build/potree/potree.js"
+        validate_certs: false
+      register: potree_js
+
+    - name: Cache header is set
+      ansible.builtin.assert:
+        that: "'max-age=86400' in potree_js.cache_control"
+
     - name: Viewer and branding assets are served
       ansible.builtin.uri:
         url: "{{ base }}/{{ item }}"

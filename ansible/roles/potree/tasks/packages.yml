@@ -4,6 +4,7 @@
     name:
       - httpd
       - mod_ssl
+      - mod_http2
       - openssl
       - unzip
       - tar

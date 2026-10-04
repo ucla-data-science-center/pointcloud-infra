@@ -31,6 +31,8 @@ argument_specs:
       potree_server_aliases:
         type: list
         elements: str
+      potree_canonical_redirect:
+        type: bool
       potree_tls_mode:
         type: str
         choices: [letsencrypt, selfsigned]
