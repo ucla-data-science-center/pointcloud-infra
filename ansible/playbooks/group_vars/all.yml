@@ -5,6 +5,7 @@
 
 # Collection pages are versioned in this repo under content/collections.
 potree_content_src: "{{ playbook_dir }}/../../content/collections/"
+potree_descriptions: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../../content/descriptions.yml') | from_yaml }}"
 
 potree_server_name: www.pointcloud.ucla.edu
 potree_server_aliases:

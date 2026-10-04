@@ -69,6 +69,15 @@
     mode: "0644"
   notify: Reload httpd
 
+- name: Install listing descriptions
+  ansible.builtin.template:
+    src: pointcloud-descriptions.inc.j2
+    dest: /etc/httpd/conf.d/pointcloud-descriptions.inc
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload httpd
+
 - name: Install site config
   ansible.builtin.template:
     src: pointcloud.conf.j2
