@@ -11,26 +11,101 @@
     - /var/cache/potree
     - "{{ potree_web_root }}"
 
-- name: Download Potree release
-  ansible.builtin.get_url:
-    url: "{{ potree_release_url }}"
-    dest: "/var/cache/potree/Potree_{{ potree_version }}.zip"
-    checksum: "{{ potree_release_checksum }}"
-    owner: root
-    group: root
-    mode: "0644"
+- name: Choose Potree source
+  ansible.builtin.set_fact:
+    _potree_active_dir: >-
+      {{ potree_install_root }}/{{ (potree_local_build | length > 0)
+         | ternary('Potree_local', 'Potree_' ~ potree_version) }}
 
-- name: Unpack Potree release
-  ansible.builtin.unarchive:
-    src: "/var/cache/potree/Potree_{{ potree_version }}.zip"
-    dest: "{{ potree_install_root }}"
-    remote_src: true
-    creates: "{{ potree_install_root }}/Potree_{{ potree_version }}/build/potree/potree.js"
+# Default: the pinned upstream release.
+- name: Install Potree release
+  when: potree_local_build | length == 0
+  block:
+    - name: Download Potree release
+      ansible.builtin.get_url:
+        url: "{{ potree_release_url }}"
+        dest: "/var/cache/potree/Potree_{{ potree_version }}.zip"
+        checksum: "{{ potree_release_checksum }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Unpack Potree release
+      ansible.builtin.unarchive:
+        src: "/var/cache/potree/Potree_{{ potree_version }}.zip"
+        dest: "{{ potree_install_root }}"
+        remote_src: true
+        creates: "{{ potree_install_root }}/Potree_{{ potree_version }}/build/potree/potree.js"
+
+# Development: a Potree checkout on your machine (after `npm run build`).
+# Staging only; see docs/hacking-on-potree.md.
+- name: Install local Potree build
+  when: potree_local_build | length > 0
+  vars:
+    _potree_local_tar: "{{ lookup('env', 'TMPDIR') | default('/tmp', true) }}/pointcloud-potree-local.tar"
+  block:
+    - name: Check the local build exists
+      ansible.builtin.stat:
+        path: "{{ potree_local_build }}/build/potree/potree.js"
+      delegate_to: localhost
+      become: false
+      register: _potree_local_js
+
+    - name: Refuse local builds outside staging
+      ansible.builtin.assert:
+        that: potree_tls_mode != 'letsencrypt'
+        fail_msg: Local Potree builds are for staging only, never production.
+
+    - name: Fail if the local build is missing
+      ansible.builtin.assert:
+        that: _potree_local_js.stat.exists
+        fail_msg: >-
+          No build found at {{ potree_local_build }}/build/potree/potree.js.
+          Run `npm install` (it also builds) in your Potree checkout first.
+
+    - name: Pack local build and libs
+      ansible.builtin.command:
+        argv:
+          - "{{ ansible_playbook_python }}"
+          - "{{ role_path }}/files/pack_content.py"
+          - "{{ potree_local_build }}"
+          - "{{ _potree_local_tar }}"
+          - build
+          - libs
+      delegate_to: localhost
+      become: false
+      run_once: true
+      changed_when: false
+
+    - name: Upload local build
+      ansible.builtin.copy:
+        src: "{{ _potree_local_tar }}"
+        dest: /var/cache/potree/potree-local.tar
+        owner: root
+        group: root
+        mode: "0644"
+      register: _potree_local_upload
+
+    - name: Create local build directory
+      ansible.builtin.file:
+        path: "{{ potree_install_root }}/Potree_local"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    # A task, not a handler, for the same reason as collection content.
+    - name: Extract local build  # noqa: no-handler
+      ansible.builtin.unarchive:
+        src: /var/cache/potree/potree-local.tar
+        dest: "{{ potree_install_root }}/Potree_local"
+        remote_src: true
+      when: _potree_local_upload is changed
 
 # Collection pages load ../build and ../libs, so both live at the web root.
-- name: Link active Potree release into the web root
+- name: Link active Potree into the web root
   ansible.builtin.file:
-    src: "{{ potree_install_root }}/Potree_{{ potree_version }}/{{ item }}"
+    src: "{{ _potree_active_dir }}/{{ item }}"
     dest: "{{ potree_web_root }}/{{ item }}"
     state: link
     force: true

@@ -15,6 +15,9 @@ argument_specs:
         type: str
         required: true
         description: "Checksum of the release zip, as algorithm:hex."
+      potree_local_build:
+        type: str
+        description: Local Potree checkout to serve instead of the release (staging only).
       potree_install_root:
         type: path
       potree_web_root:

@@ -4,6 +4,8 @@ Everything that runs [pointcloud.ucla.edu](https://www.pointcloud.ucla.edu/), th
 
 If the server disappeared tomorrow, this repo should be enough to bring it back.
 
+**New here, or a student contributor?** Start with [docs/getting-started.md](docs/getting-started.md) (local copy of the site in about 30 minutes, no AWS access needed), then [CONTRIBUTING.md](CONTRIBUTING.md) and [project ideas](docs/project-ideas.md). Want to work on the Potree viewer itself? See [hacking on Potree](docs/hacking-on-potree.md).
+
 ## How it fits together
 
 ```
@@ -34,7 +36,7 @@ There is no cloud staging server. Potree only changes when upstream cuts a relea
 
 ## Quick start
 
-You need [pixi](https://pixi.sh) and [Podman](https://podman.io). Everything else (Ansible, Molecule, Terraform, linters) comes from `pixi.toml` at pinned versions.
+You need [pixi](https://pixi.sh) and [Podman](https://podman.io). Everything else (Ansible, Molecule, Terraform, linters) comes from `pixi.toml` at pinned versions. Full walkthrough, including Linux and Windows: [docs/getting-started.md](docs/getting-started.md).
 
 ```bash
 # one time
@@ -53,6 +55,7 @@ pixi run test              # full test: build, configure twice (idempotence), ve
 | I want to... | Do this |
 |---|---|
 | Add or update a collection | Put the folder in `content/collections/`, `pixi run staging-up`, check it, open a PR. After merge: `pixi run deploy`. |
+| Work on Potree itself | `pixi run staging-potree-dev ~/src/potree` after building your checkout. See [hacking on Potree](docs/hacking-on-potree.md). |
 | Upgrade Potree | Change `potree_version` and `potree_release_checksum` in `ansible/roles/potree/defaults/main.yml`, `pixi run test`, PR, deploy. |
 | See what a deploy would change | `pixi run deploy-check` |
 | Deploy | `pixi run deploy` |
@@ -74,6 +77,9 @@ terraform/                     production AWS resources (state in S3)
 content/collections/           collection pages served at the site root
 scripts/site-check.sh          HTTP + certificate expiry check
 docs/
+  getting-started.md           local setup for new contributors
+  hacking-on-potree.md         working on the viewer, contributing upstream
+  project-ideas.md             projects sized for students
   runbook.md                   how to do things, how to fix things
   cutover.md                   one-time migration from the hand-built server
   decisions/                   why things are the way they are
@@ -86,7 +92,7 @@ docs/
 
 ## Contributing
 
-Branch, open a PR, let CI pass. Nothing goes to production without a PR. Questions: datascience@library.ucla.edu.
+Students, staff, anyone: see [CONTRIBUTING.md](CONTRIBUTING.md). In short, branch, test in staging, open a PR, and let CI pass. Nothing goes to production without a reviewed PR, and you never need production access to contribute. Questions: datascience@ucla.edu.
 
 ## License
 

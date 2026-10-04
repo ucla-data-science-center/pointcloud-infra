@@ -5,6 +5,11 @@ potree_version: "1.8.2"
 potree_release_url: "https://github.com/potree/potree/releases/download/{{ potree_version }}/Potree_{{ potree_version }}.zip"
 potree_release_checksum: "sha256:c140a8bce0ce129de762fbc0fd3ba7c21120ffd36d423dd2755abb39f32aebe5"
 
+# Path on YOUR machine to a Potree checkout with a fresh `npm run build`.
+# When set, staging serves that build instead of the release above. For
+# working on Potree itself; never set this for production.
+potree_local_build: ""
+
 # Releases unpack under potree_install_root/Potree_<version>; the web root
 # links build/ and libs/ to the active release, so rollback is a version bump.
 potree_install_root: /opt/potree

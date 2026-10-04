@@ -9,4 +9,4 @@ potree_content_src: "{{ playbook_dir }}/../../content/collections/"
 potree_server_name: www.pointcloud.ucla.edu
 potree_server_aliases:
   - pointcloud.ucla.edu
-potree_letsencrypt_email: datascience@library.ucla.edu
+potree_letsencrypt_email: datascience@ucla.edu

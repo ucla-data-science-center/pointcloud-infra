@@ -9,7 +9,10 @@ File mtimes come from each file's last git commit, so the directory listing's
 "Last modified" column is meaningful and identical on every checkout. Files
 not yet committed fall back to their filesystem mtime.
 
-Usage: pack_content.py <src_dir> <dest_tar>
+Usage: pack_content.py <src_dir> <dest_tar> [subdir ...]
+
+With subdirs, only those subdirectories of src_dir are packed (used to ship
+just build/ and libs/ from a local Potree checkout, skipping node_modules).
 """
 import os
 import subprocess
@@ -50,8 +53,9 @@ def normalize(info: tarfile.TarInfo, mtime: int) -> tarfile.TarInfo:
 
 def main() -> int:
     src, dest = sys.argv[1], sys.argv[2]
+    roots = [os.path.join(src, d) for d in sys.argv[3:]] or [src]
     paths = []
-    for root, dirs, files in os.walk(src):
+    for root, dirs, files in (entry for r in roots for entry in os.walk(r)):
         dirs[:] = sorted(d for d in dirs if not d.startswith("."))
         for name in sorted(files):
             if name.startswith("."):
