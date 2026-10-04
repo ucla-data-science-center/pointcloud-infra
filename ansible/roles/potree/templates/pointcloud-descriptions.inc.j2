@@ -2,19 +2,30 @@
 # Generated from content/descriptions.yml (named .inc so httpd doesn't load it
 # globally; the 443 vhost includes it). Apache renders description text as
 # HTML, so every value is escaped.
+#
+# Two Apache behaviors shape this file:
+# - <Directory> applies to subdirectories too, so folder descriptions would
+#   leak into every collection listing. <DirectoryMatch> with a "$"-anchored
+#   regex applies to exactly one directory (Apache 2.3.9+).
+# - A bare name in AddDescription is a partial match ("Test" would also label
+#   "DSC_Test_x"). A "*/<name>" pattern is matched against the whole path, so
+#   it needs a "/" right before the name.
+# The regex accepts both the configured web root and a resolved release
+# directory, because the web root may be a symlink.
 {% set folders = potree_descriptions.folders | default({}) %}
 {% set files = potree_descriptions.files | default({}) %}
+{% set roots = '(' ~ (potree_web_root | regex_escape) ~ '|' ~ (potree_releases_root | default('/nonexistent') | regex_escape) ~ '/[^/]+)' %}
 {% if folders.values() | select | list %}
-<Directory "{{ potree_web_root }}">
+<DirectoryMatch "^{{ roots }}/?$">
 {% for name, text in folders.items() if text %}
-    AddDescription "{{ text | e }}" "{{ name }}"
+    AddDescription "{{ text | e }}" "*/{{ name }}"
 {% endfor %}
-</Directory>
+</DirectoryMatch>
 {% endif %}
 {% for dir in files.keys() | map('dirname') | unique | sort %}
-<Directory "{{ potree_web_root }}/{{ dir }}">
+<DirectoryMatch "^{{ roots }}/{{ dir | regex_escape }}/?$">
 {%   for path, text in files.items() if text and (path | dirname) == dir %}
-    AddDescription "{{ text | e }}" "{{ path | basename }}"
+    AddDescription "{{ text | e }}" "*/{{ path | basename }}"
 {%   endfor %}
-</Directory>
+</DirectoryMatch>
 {% endfor %}

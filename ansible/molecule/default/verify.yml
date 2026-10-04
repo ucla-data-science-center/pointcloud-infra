@@ -52,6 +52,20 @@
           - "'All Days Merged and Classified' in iceland.content"
           - "'indexcoldesc' in iceland.content"
 
+    - name: Fetch the root listing
+      ansible.builtin.uri:
+        url: "{{ base }}/"
+        validate_certs: false
+        return_content: true
+      register: root_listing
+
+    - name: Folder descriptions match whole names only
+      ansible.builtin.assert:
+        that:
+          # "Test" must label only Test/, not other names containing "Test"
+          - root_listing.content is search('href="Test/".*?Test page, not a collection', multiline=True)
+          - root_listing.content.count('Test page, not a collection') == 1
+
     - name: Potree assets are cacheable
       ansible.builtin.uri:
         url: "{{ base }}/build/potree/potree.js"
