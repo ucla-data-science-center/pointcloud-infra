@@ -20,6 +20,9 @@ Guidance for AI coding agents (and people) working in this repo.
 - Production and staging are Rocky Linux 10 (Red Hat family, like the rest of the Library). The last Ubuntu version is the `ubuntu-baseline` tag, kept as a teaching starting point.
 - Stock `/etc/httpd/conf.d/welcome.conf` disables the listing at `/`; the role neutralizes it. If the home page shows the Rocky test page, that file came back.
 - Keep everything httpd serves under `/var/www` so SELinux labels are right by default. Containers don't enforce SELinux, so Molecule won't catch a mistake here; production will.
+- `/var/www/pointcloud` is a symlink to a content release; never edit files under `/var/www/pointcloud-releases/` by hand (the next deploy's manifest check will reinstall the release anyway).
+- `pack_content.py` refuses shallow git clones. In CI use `fetch-depth: 0`; locally `git fetch --unshallow`.
+- `pixi run -e exam ...` is a separate ansible-core 2.16 + ansible-navigator environment for Red Hat exam practice. Production tooling is the default env.
 - ansible-core 2.17+ refuses non-blocking stdio. If you see "Ansible requires blocking IO", pipe output through `| cat`.
 - The directory listing skin depends on `IndexStyleSheet`; without it Apache omits `table#indexlist` and the CSS stops matching.
 - Collection pages load `../build` and `../libs`, so Potree must live at the web root (the role symlinks the active release there).

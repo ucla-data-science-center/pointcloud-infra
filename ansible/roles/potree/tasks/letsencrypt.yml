@@ -25,7 +25,8 @@
       - --deploy-hook
       - systemctl reload httpd
 
-# EPEL's certbot ships the renewal timer disabled.
+# EPEL's certbot ships the renewal timer disabled. (Also enforced in main.yml
+# for hosts whose certificate was copied in rather than issued here.)
 - name: Enable automatic renewal
   ansible.builtin.systemd_service:
     name: certbot-renew.timer

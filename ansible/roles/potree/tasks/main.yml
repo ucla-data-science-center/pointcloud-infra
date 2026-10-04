@@ -17,12 +17,13 @@
     - potree_tls_mode == 'letsencrypt'
     - not _potree_le_cert.stat.exists
 
-- name: Keep certificate renewal enabled
-  ansible.builtin.systemd_service:
-    name: certbot-renew.timer
-    state: started
-    enabled: true
+- name: Keep certificate renewal working
+  ansible.builtin.import_tasks: renewal.yml
   when: potree_tls_mode == 'letsencrypt'
+
+- name: Enforce SELinux and fix labels
+  ansible.builtin.import_tasks: selinux.yml
+  when: potree_require_selinux
 
 - name: Configure host maintenance
   ansible.builtin.import_tasks: maintenance.yml

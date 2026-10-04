@@ -88,7 +88,9 @@ docs/
 
 ## Monitoring
 
-`.github/workflows/site-watch.yml` checks the site and certificate expiry every morning and fails (emailing repo watchers) if the site is down or the cert has under 21 days left. Let's Encrypt no longer sends expiry emails, and in August 2026 the old server's certificates expired unnoticed for weeks. Watch this repo to get the alerts.
+`.github/workflows/site-watch.yml` runs `scripts/site-check.sh` every morning: the site answers, the bare domain redirects to the exact `www` URL, a real collection's point cloud data loads from S3, and both certificates have 21+ days left. A failed run emails repo watchers. Let's Encrypt no longer sends expiry emails, and in August 2026 the old server's certificates expired unnoticed for weeks.
+
+Two caveats: GitHub disables scheduled workflows after 60 days without repo activity, and only people watching the repo get the email. At least one named person should watch the repo with Actions notifications on, and check the Actions tab now and then for a missing daily run.
 
 ## Contributing
 

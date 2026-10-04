@@ -49,6 +49,22 @@ tf-apply = { cmd = "terraform apply", cwd = "terraform" }
 # Quick health check of the live site (same check the scheduled GitHub Action runs)
 site-check = "bash scripts/site-check.sh"
 
+# Exam practice environment: matches the Red Hat AU294/EX294 stack
+# (ansible-core 2.16), with ansible-navigator. Use: `pixi run -e exam ...`
+# or `pixi shell -e exam`. Separate from the default env so production
+# tooling can stay current.
+[feature.exam.dependencies]
+python = "3.12.*"
+ansible-core = "2.16.*"
+oniguruma = "*"   # C library ansible-navigator's onigurumacffi builds against
+
+# From PyPI: conda-forge lacks a navigator dependency (onigurumacffi) on Apple Silicon.
+[feature.exam.pypi-dependencies]
+ansible-navigator = "*"
+
+[environments]
+exam = { features = ["exam"], no-default-feature = true }
+
 # Keep packages from ~/.local (pip --user) out of this environment.
 [activation.env]
 PYTHONNOUSERSITE = "1"

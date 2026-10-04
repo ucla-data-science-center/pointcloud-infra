@@ -31,6 +31,8 @@
     state: present
   when: potree_manage_firewalld
 
+# AWS's documented install path; "latest" is intentional (the agent
+# self-updates in place, so pinning a URL would only go stale).
 - name: Install SSM agent
   ansible.builtin.dnf:
     name: "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/{{ _arch }}/amazon-ssm-agent.rpm"
